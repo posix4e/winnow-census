@@ -11,14 +11,14 @@ name: Site
 # push made with the workflow token does not trigger this workflow.
 #
 # Requires repo secrets: CF_API_TOKEN made from the "Edit Cloudflare Workers"
-# template with the winnowwallet.com zone included (see README), and
-# CF_ACCOUNT_ID.
+# template plus Zone -> DNS -> Edit, with the winnowwallet.com zone included
+# (see README), and CF_ACCOUNT_ID.
 
 on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["index.html", "census/**", ".github/workflows/site.yml"]
+    paths: ["index.html", "census/**", "wrangler.jsonc", ".github/workflows/site.yml"]
 
 permissions:
   contents: read

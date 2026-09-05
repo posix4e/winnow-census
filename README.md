@@ -72,7 +72,10 @@ push to main and after every daily census. Two repository secrets are needed:
 - `CF_ACCOUNT_ID` — the account ID, shown on the right of any zone's
   Overview page in the Cloudflare dashboard.
 - `CF_API_TOKEN` — an API token made from the **Edit Cloudflare Workers**
-  template (My Profile → API Tokens → Create Token), with **Zone Resources**
-  set to include `winnowwallet.com` so the custom domain can be created.
+  template (My Profile → API Tokens → Create Token), plus **Zone → DNS →
+  Edit**, with **Zone Resources** set to include `winnowwallet.com` so the
+  custom domain and its DNS record can be created. If a `census` DNS record
+  already exists in the zone, delete it before the first deploy; wrangler will
+  not overwrite one.
 
 Nothing else is configured by hand: no DNS record, no Pages project.
