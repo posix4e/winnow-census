@@ -69,8 +69,10 @@ jobs:
             fi
             if [ "$i2p_ok" = 0 ]; then
               page=$(curl -s --max-time 5 http://127.0.0.1:7071/ | sed 's/<[^>]*>/ /g' | tr -s ' \n')
-              rate=$(echo "$page" | grep -oE 'Tunnel creation success rate: *[0-9]+' | grep -oE '[0-9]+$')
-              routers=$(echo "$page" | grep -oE 'Routers: *[0-9]+' | grep -oE '[0-9]+$')
+              # The console is not up for the first seconds; under bash -e an
+              # empty grep in an assignment would end the step, so allow it.
+              rate=$(echo "$page" | grep -oE 'Tunnel creation success rate: *[0-9]+' | grep -oE '[0-9]+$' || true)
+              routers=$(echo "$page" | grep -oE 'Routers: *[0-9]+' | grep -oE '[0-9]+$' || true)
               if [ "${rate:-0}" -ge 40 ] && [ "${routers:-0}" -ge 300 ]; then
                 i2p_ok=1; echo "i2pd: ready (success rate ${rate}%, ${routers} routers)"
               fi
