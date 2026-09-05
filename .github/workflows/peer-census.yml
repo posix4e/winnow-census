@@ -21,6 +21,14 @@ on:
   schedule:
     - cron: "23 5 * * *"
   workflow_dispatch:
+    inputs:
+      sample:
+        description: "Dial only this many endpoints (0 = every one); for diagnostic runs"
+        default: "0"
+      publish:
+        description: "Commit the aggregate and deploy the site"
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -88,14 +96,26 @@ jobs:
           [ "$tor_ok" = 1 ] && [ "$i2p_ok" = 1 ]
 
       - name: Dial every reachable endpoint
+        # The router logs and a health line at the end go into the artifact:
+        # the second run lost every Tor handshake a quarter of the way in,
+        # and nothing in the job output said why.
         run: |
           TIP=$(python3 -c 'import json; print(json.load(open("snapshot.json")).get("latest_height", 0))')
-          echo "tip $TIP"
+          SAMPLE="${{ inputs.sample || '0' }}"
+          SAMPLE_FLAG=""; [ "$SAMPLE" = "0" ] || SAMPLE_FLAG="--sample $SAMPLE"
+          echo "tip $TIP; sample ${SAMPLE}; fd limit $(ulimit -n); $(tor --version | head -n 1)"
           .build/release/WinnowCensus --input snapshot.json --parallel 128 --timeout 8 --hidden-timeout 30 \
-            --tip "$TIP" --tor-socks 127.0.0.1:9050 --i2p-socks 127.0.0.1:4447 \
+            --tip "$TIP" --tor-socks 127.0.0.1:9050 --i2p-socks 127.0.0.1:4447 $SAMPLE_FLAG \
             --out census.jsonl --summary-json summary.json | tee census-summary.txt
+          pgrep -x tor > /dev/null && echo "tor: still running" || echo "::warning::the tor process is gone"
+          pgrep -x i2pd > /dev/null && echo "i2pd: still running" || echo "::warning::the i2pd process is gone"
+          cp "$RUNNER_TEMP/tor.log" tor.log 2>/dev/null || true
+          cp "$RUNNER_TEMP/i2pd.log" i2pd.log 2>/dev/null || true
+          echo "tor warnings and errors:"
+          grep -hE '\[(warn|err)\]' tor.log 2>/dev/null | sed -E 's/^[A-Za-z]{3} [0-9]{2} [0-9:.]+ //' | sort | uniq -c | sort -rn | head -n 20 || true
 
       - name: Publish the aggregate
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
         run: |
           scripts/census-publish summary.json --dir census
           git config user.name "winnow-census"
@@ -114,12 +134,14 @@ jobs:
           exit 1
 
       - name: Assemble the site
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
         run: |
           rm -rf site && mkdir site
           cp index.html site/
           cp -r census site/census
 
       - name: Deploy the Worker
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
@@ -135,4 +157,6 @@ jobs:
           path: |
             census.jsonl
             census-summary.txt
+            tor.log
+            i2pd.log
           retention-days: 14
