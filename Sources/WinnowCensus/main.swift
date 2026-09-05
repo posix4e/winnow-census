@@ -18,14 +18,21 @@ import Foundation
 ///
 /// Input: a Bitnodes/btcnodes snapshot (`{"nodes": {"host:port": [...]}}`)
 /// or a plain list, one `host:port` per line. Onion and I2P addresses are
-/// skipped; there is no Tor transport here.
+/// dialled through the SOCKS5 proxies given, or skipped without one.
 struct Options: Sendable {
     var input: URL?
     var out: URL?
     /// Machine-readable summary for the scheduled census (docs/census/).
     var summary: URL?
     var sample = 0 // 0 = all
+    /// Concurrent dials, per overlay. Each overlay has its own queue and its
+    /// own ceiling: a Tor client keeps only a few dozen circuits pending at
+    /// once (MaxClientCircuitsPending, default 32), and onion dials beyond
+    /// that do not queue politely, they saturate it until every rendezvous
+    /// times out. Clearnet has no such limit.
     var parallel = 64
+    var torParallel = 32
+    var i2pParallel = 64
     var timeout: Duration = .seconds(8)
     var feeFilterWait: Duration = .milliseconds(1_500)
     var network: NetworkParams = .mainnet
@@ -68,6 +75,8 @@ private func parseOptions() -> Options {
         case "--summary-json": options.summary = args.next().map { URL(fileURLWithPath: $0) }
         case "--sample": options.sample = Int(args.next() ?? "") ?? 0
         case "--parallel": options.parallel = Int(args.next() ?? "") ?? 64
+        case "--tor-parallel": options.torParallel = Int(args.next() ?? "") ?? 32
+        case "--i2p-parallel": options.i2pParallel = Int(args.next() ?? "") ?? 64
         case "--timeout": options.timeout = .seconds(Double(args.next() ?? "") ?? 8)
         case "--feefilter-wait-ms": options.feeFilterWait = .milliseconds(Int(args.next() ?? "") ?? 1_500)
         case "--seed": options.seed = UInt64(args.next() ?? "") ?? 42
@@ -84,7 +93,8 @@ private func parseOptions() -> Options {
         case "--help", "-h":
             print("""
             usage: WinnowCensus --input nodes.json|nodes.txt [--out results.jsonl] [--summary-json summary.json]
-                                [--sample N] [--parallel 64] [--timeout 8] [--feefilter-wait-ms 1500]
+                                [--sample N] [--parallel 64] [--tor-parallel 32] [--i2p-parallel 64]
+                                [--timeout 8] [--feefilter-wait-ms 1500]
                                 [--tor-socks 127.0.0.1:9050] [--i2p-socks 127.0.0.1:4447] [--hidden-timeout 25]
                                 [--tip HEIGHT]
             """)
@@ -356,10 +366,25 @@ private func summarize(_ records: [Record], tip: Int32, splitHeight: Int32 = 961
     for (ua, n) in uaCounts.sorted(by: { $0.value > $1.value }).prefix(8) { print("  \(n)  \(ua)") }
 }
 
-/// Dials `endpoints` with bounded parallelism, streaming records to `output`.
-func crawl(_ endpoints: [PeerEndpoint], options: Options, output: FileHandle?) async -> [Record] {
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.sortedKeys]
+/// Serialises the streamed output: the overlays are crawled concurrently.
+actor RecordSink {
+    private let handle: FileHandle?
+    private let encoder: JSONEncoder
+    init(handle: FileHandle?) {
+        self.handle = handle
+        encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+    }
+    func write(_ record: Record) {
+        guard let handle, let data = try? encoder.encode(record) else { return }
+        handle.write(data)
+        handle.write(Data("\n".utf8))
+    }
+}
+
+/// Dials `endpoints` with at most `parallel` in flight, streaming records to `sink`.
+func crawl(_ endpoints: [PeerEndpoint], label: String, parallel: Int, options: Options,
+           sink: RecordSink) async -> [Record] {
     var records: [Record] = []
     var done = 0
     await withTaskGroup(of: Record.self) { group in
@@ -370,16 +395,13 @@ func crawl(_ endpoints: [PeerEndpoint], options: Options, output: FileHandle?) a
             next += 1
             group.addTask { await probe(endpoint, options: options) }
         }
-        for _ in 0 ..< min(options.parallel, endpoints.count) { enqueue() }
+        for _ in 0 ..< min(parallel, endpoints.count) { enqueue() }
         for await record in group {
             records.append(record)
             done += 1
-            if let data = try? encoder.encode(record) {
-                output?.write(data)
-                output?.write(Data("\n".utf8))
-            }
-            if done % 200 == 0 {
-                FileHandle.standardError.write(Data("\(done)/\(endpoints.count)\n".utf8))
+            await sink.write(record)
+            if done % 200 == 0 || done == endpoints.count {
+                FileHandle.standardError.write(Data("\(label) \(done)/\(endpoints.count)\n".utf8))
             }
             enqueue()
         }
@@ -387,18 +409,42 @@ func crawl(_ endpoints: [PeerEndpoint], options: Options, output: FileHandle?) a
     return records
 }
 
+/// One queue per overlay, run side by side, each with its own ceiling (see
+/// `Options.parallel`). Records come back in completion order across all
+/// three.
+func crawlAll(_ endpoints: [PeerEndpoint], options: Options, output: FileHandle?) async -> [Record] {
+    let sink = RecordSink(handle: output)
+    let byOverlay = Dictionary(grouping: endpoints) { OverlayNetwork(host: $0.host) }
+    return await withTaskGroup(of: [Record].self) { group in
+        for (overlay, members) in byOverlay.sorted(by: { $0.key.rawValue < $1.key.rawValue }) {
+            let parallel = switch overlay {
+            case .clearnet: options.parallel
+            case .tor: options.torParallel
+            case .i2p: options.i2pParallel
+            }
+            FileHandle.standardError.write(Data("\(overlay.rawValue): \(members.count) endpoints, \(parallel) at a time\n".utf8))
+            group.addTask {
+                await crawl(members, label: overlay.rawValue, parallel: parallel, options: options, sink: sink)
+            }
+        }
+        var all: [Record] = []
+        for await part in group { all += part }
+        return all
+    }
+}
+
 let options = parseOptions()
 var endpoints = try loadEndpoints(from: options.input!, options: options)
 var generator = SeededGenerator(state: options.seed)
 endpoints.shuffle(using: &generator)
 if options.sample > 0 { endpoints = Array(endpoints.prefix(options.sample)) }
-FileHandle.standardError.write(Data("dialling \(endpoints.count) endpoints, \(options.parallel) at a time\n".utf8))
+FileHandle.standardError.write(Data("dialling \(endpoints.count) endpoints\n".utf8))
 var output: FileHandle?
 if let out = options.out {
     FileManager.default.createFile(atPath: out.path, contents: nil)
     output = try FileHandle(forWritingTo: out)
 }
-let records = await crawl(endpoints, options: options, output: output)
+let records = await crawlAll(endpoints, options: options, output: output)
 try? output?.close()
 let tip = observedTip(records, override: options.tip)
 if let summaryURL = options.summary {

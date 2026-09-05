@@ -16,7 +16,10 @@ how many claim a chain that is not Bitcoin's.
   or a plain `host:port` file) with Winnow's `PeerConnection`, records what each
   peer reports in its handshake, waits a moment for the BIP133 fee filter, and
   disconnects. Read-only: version, verack, disconnect. Tor and I2P addresses go
-  through local SOCKS5 proxies when `--tor-socks` / `--i2p-socks` are given.
+  through local SOCKS5 proxies when `--tor-socks` / `--i2p-socks` are given,
+  each overlay on its own queue with its own ceiling (`--parallel`,
+  `--tor-parallel`, `--i2p-parallel`): a Tor client saturates, rather than
+  queues, past a few dozen concurrent rendezvous.
 - `scripts/census-publish` — files a run's summary under `census/<date>.json`
   and rebuilds `census/index.json`.
 - `scripts/census-tables` — Markdown tables from a run's JSON lines, for a

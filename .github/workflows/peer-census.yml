@@ -64,7 +64,13 @@ jobs:
           brew install tor i2pd > /dev/null 2>&1 || brew install tor i2pd
           mkdir -p "$RUNNER_TEMP/tor" "$RUNNER_TEMP/i2pd"
           chmod 700 "$RUNNER_TEMP/tor"
+          # A stock client keeps 32 circuits pending and learns its build
+          # timeout from the fastest ones; under a few dozen concurrent
+          # rendezvous both fall over (the log fills with "already have 32
+          # general-purpose client circuits pending" and the timeout resets
+          # every few seconds). Raise the one, fix the other.
           nohup tor --SocksPort 9050 --DataDirectory "$RUNNER_TEMP/tor" --ClientOnly 1 \
+            --MaxClientCircuitsPending 256 --LearnCircuitBuildTimeout 0 --CircuitBuildTimeout 60 \
             --Log "notice file $RUNNER_TEMP/tor.log" > /dev/null 2>&1 &
           nohup i2pd --datadir="$RUNNER_TEMP/i2pd" --socksproxy.enabled=true --socksproxy.port=4447 \
             --httpproxy.enabled=false --sam.enabled=false --i2pcontrol.enabled=false \
@@ -104,7 +110,8 @@ jobs:
           SAMPLE="${{ inputs.sample || '0' }}"
           SAMPLE_FLAG=""; [ "$SAMPLE" = "0" ] || SAMPLE_FLAG="--sample $SAMPLE"
           echo "tip $TIP; sample ${SAMPLE}; fd limit $(ulimit -n); $(tor --version | head -n 1)"
-          .build/release/WinnowCensus --input snapshot.json --parallel 128 --timeout 8 --hidden-timeout 30 \
+          .build/release/WinnowCensus --input snapshot.json --parallel 128 --tor-parallel 48 --i2p-parallel 64 \
+            --timeout 8 --hidden-timeout 30 \
             --tip "$TIP" --tor-socks 127.0.0.1:9050 --i2p-socks 127.0.0.1:4447 $SAMPLE_FLAG \
             --out census.jsonl --summary-json summary.json | tee census-summary.txt
           pgrep -x tor > /dev/null && echo "tor: still running" || echo "::warning::the tor process is gone"
