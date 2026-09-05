@@ -1,16 +1,18 @@
 name: Site
 
-# Deploys the page and the data to Cloudflare Pages, next to winnowwallet.com.
-#   push to main    -> production (census.winnowwallet.com)
+# Deploys the page and the data as a Cloudflare Worker with static assets
+# (wrangler.jsonc). The Worker's custom domain, census.winnowwallet.com, is
+# created by Cloudflare on deploy along with its DNS record and certificate;
+# nothing is configured by hand.
+#   push to main      -> deploy
 #   workflow_dispatch -> the same, for the first deploy and for reruns
 #
 # The daily census job deploys itself after committing a data point, because a
 # push made with the workflow token does not trigger this workflow.
 #
-# Requires repo secrets: CF_API_TOKEN (Account -> Cloudflare Pages: Edit; add
-# Zone -> DNS: Edit for winnowwallet.com and the CNAME is created for you),
-# CF_ACCOUNT_ID. Project name: winnow-census. Custom domain:
-# census.winnowwallet.com.
+# Requires repo secrets: CF_API_TOKEN made from the "Edit Cloudflare Workers"
+# template with the winnowwallet.com zone included (see README), and
+# CF_ACCOUNT_ID.
 
 on:
   workflow_dispatch:
@@ -42,39 +44,11 @@ jobs:
           cp index.html site/
           cp -r census site/census
 
-      - name: Deploy to Cloudflare Pages
+      - name: Deploy the Worker
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
           packageManager: npm
           wranglerVersion: "4.125.0"
-          # The project is created on the first run; every later run finds it.
-          preCommands: npx wrangler pages project create winnow-census --production-branch=main || true
-          command: pages deploy site --project-name=winnow-census --branch=main --commit-dirty=true
-
-      - name: Attach census.winnowwallet.com
-        # Idempotent: attaching an already-attached domain is reported and
-        # ignored. The DNS record is created only if the token can edit the
-        # zone; otherwise the step says what to add by hand.
-        env:
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-        run: |
-          api() { curl -s -H "Authorization: Bearer $CF_API_TOKEN" -H "Content-Type: application/json" "$@"; }
-          api -X POST "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/pages/projects/winnow-census/domains" \
-            --data '{"name":"census.winnowwallet.com"}' \
-            | python3 -c 'import sys,json; d=json.load(sys.stdin); print("custom domain:", "attached" if d.get("success") else d.get("errors"))'
-          ZONE=$(api "https://api.cloudflare.com/client/v4/zones?name=winnowwallet.com" | python3 -c 'import sys,json; r=json.load(sys.stdin).get("result") or []; print(r[0]["id"] if r else "")')
-          if [ -z "$ZONE" ]; then
-            echo "::notice::The token cannot read the winnowwallet.com zone. Add a CNAME record: census -> winnow-census.pages.dev"
-            exit 0
-          fi
-          EXISTING=$(api "https://api.cloudflare.com/client/v4/zones/$ZONE/dns_records?type=CNAME&name=census.winnowwallet.com" | python3 -c 'import sys,json; print(len(json.load(sys.stdin).get("result") or []))')
-          if [ "$EXISTING" = "0" ]; then
-            api -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE/dns_records" \
-              --data '{"type":"CNAME","name":"census","content":"winnow-census.pages.dev","proxied":true,"comment":"Cloudflare Pages: winnow-census"}' \
-              | python3 -c 'import sys,json; d=json.load(sys.stdin); print("dns:", "CNAME census -> winnow-census.pages.dev created" if d.get("success") else d.get("errors"))'
-          else
-            echo "dns: CNAME already present"
-          fi
+          command: deploy

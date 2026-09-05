@@ -24,9 +24,11 @@ how many claim a chain that is not Bitcoin's.
 - `.github/workflows/peer-census.yml` — the daily run on a GitHub-hosted macOS
   runner, which installs Tor and i2pd itself, commits the aggregate here, and
   deploys the site.
-- `.github/workflows/site.yml` — deploys `index.html` and `census/` to
-  Cloudflare Pages (project `winnow-census`, next to winnowwallet.com) on every
-  push to main. Needs the `CF_API_TOKEN` and `CF_ACCOUNT_ID` secrets.
+- `.github/workflows/site.yml` and `wrangler.jsonc` — deploy `index.html` and
+  `census/` as a Cloudflare Worker with static assets on every push to main.
+  The Worker's custom domain, census.winnowwallet.com, gets its DNS record and
+  certificate from Cloudflare on deploy. Needs the `CF_API_TOKEN` and
+  `CF_ACCOUNT_ID` secrets; see "Deploying" below.
 - `index.html` — the page.
 - `census/` — one aggregate per day. Per-node detail is a two-week workflow
   artifact; btcnodes already publishes the per-IP view.
@@ -60,3 +62,17 @@ The first run, 2026-09-04, and the stall in the wallet that prompted it, are
 written up in [One in Twelve Peers Is on a Dead Chain](https://apnewman.com/p/dead-chain-peers/).
 The tool began life as posix4e/winnow#176 and moved here so the wallet's
 history never carries a daily data commit.
+
+## Deploying
+
+The site is a Cloudflare Worker that serves static assets; `wrangler deploy`
+uploads `site/` and creates the custom domain. GitHub Actions does it on every
+push to main and after every daily census. Two repository secrets are needed:
+
+- `CF_ACCOUNT_ID` — the account ID, shown on the right of any zone's
+  Overview page in the Cloudflare dashboard.
+- `CF_API_TOKEN` — an API token made from the **Edit Cloudflare Workers**
+  template (My Profile → API Tokens → Create Token), with **Zone Resources**
+  set to include `winnowwallet.com` so the custom domain can be created.
+
+Nothing else is configured by hand: no DNS record, no Pages project.

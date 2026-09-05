@@ -1,9 +1,9 @@
 name: Peer census
 
 # Dials every reachable endpoint in the day's btcnodes snapshot with Winnow's
-# own handshake, commits the aggregate to census/, and deploys the site to
-# Cloudflare Pages (a push made with the workflow token does not trigger the
-# Site workflow, so this job deploys itself). Read-only against the network:
+# own handshake, commits the aggregate to census/, and deploys the site
+# Worker (a push made with the workflow token does not trigger the Site
+# workflow, so this job deploys itself). Read-only against the network:
 # version, verack, a short wait for feefilter, disconnect.
 #
 # Runs on a GitHub-hosted macOS runner: PeerConnection is built on
@@ -99,14 +99,14 @@ jobs:
           cp index.html site/
           cp -r census site/census
 
-      - name: Deploy to Cloudflare Pages
+      - name: Deploy the Worker
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           accountId: ${{ secrets.CF_ACCOUNT_ID }}
           packageManager: npm
           wranglerVersion: "4.125.0"
-          command: pages deploy site --project-name=winnow-census --branch=main --commit-dirty=true
+          command: deploy
 
       - name: Keep the per-node detail for two weeks
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

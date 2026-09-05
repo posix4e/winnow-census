@@ -4,3 +4,6 @@ census.jsonl
 census-summary.txt
 summary.json
 .DS_Store
+site/
+node_modules/
+.wrangler/
