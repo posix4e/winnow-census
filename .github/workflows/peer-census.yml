@@ -1,0 +1,102 @@
+name: Peer census
+
+# Dials every reachable endpoint in the day's btcnodes snapshot with Winnow's
+# own handshake and commits the aggregate to census/, which GitHub Pages
+# renders from this branch. Read-only against the network: version, verack, a
+# short wait for feefilter, disconnect.
+#
+# Runs on a GitHub-hosted macOS runner: PeerConnection is built on
+# Network.framework, and the repository is public, so macOS minutes cost
+# nothing. Tor and I2P endpoints are most of the snapshot, so the job installs
+# Tor and an I2P router with Homebrew and dials them through local SOCKS
+# ports. Either router failing to come up degrades to skipping that network,
+# never to skipping the run. The per-node JSON lines are kept as a 14-day
+# artifact rather than committed: btcnodes already publishes the per-IP view.
+
+on:
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: peer-census
+  cancel-in-progress: false
+
+jobs:
+  census:
+    runs-on: macos-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Fetch the day's snapshot
+        run: |
+          curl -sSL --max-time 120 -A "winnow-census/0.1 (+https://github.com/posix4e/winnow-census)" \
+            -o snapshot.json "https://btcnodes.io/api/v1/snapshots/latest/"
+          python3 -c 'import json; d=json.load(open("snapshot.json")); print(len(d["nodes"]), "reachable endpoints, tip", d.get("latest_height"))'
+
+      - name: Build
+        run: swift build -c release --product WinnowCensus
+
+      - name: Start Tor and an I2P router
+        # Throwaway data directories under the runner's temp: nothing here
+        # outlives the job. i2pd needs about ten minutes to learn enough
+        # routers and build tunnels; the readiness poll caps that at fifteen
+        # and carries on without I2P if it is not there by then.
+        run: |
+          brew install tor i2pd > /dev/null 2>&1 || brew install tor i2pd
+          mkdir -p "$RUNNER_TEMP/tor" "$RUNNER_TEMP/i2pd"
+          chmod 700 "$RUNNER_TEMP/tor"
+          nohup tor --SocksPort 9050 --DataDirectory "$RUNNER_TEMP/tor" --ClientOnly 1 \
+            --Log "notice file $RUNNER_TEMP/tor.log" > /dev/null 2>&1 &
+          nohup i2pd --datadir="$RUNNER_TEMP/i2pd" --socksproxy.enabled=true --socksproxy.port=4447 \
+            --httpproxy.enabled=false --sam.enabled=false --i2pcontrol.enabled=false \
+            --http.enabled=true --http.port=7071 --log=file --logfile="$RUNNER_TEMP/i2pd.log" \
+            --loglevel=warn > /dev/null 2>&1 &
+          for _ in $(seq 1 36); do
+            grep -q 'Bootstrapped 100%' "$RUNNER_TEMP/tor.log" 2>/dev/null && break
+            sleep 5
+          done
+          grep -q 'Bootstrapped 100%' "$RUNNER_TEMP/tor.log" 2>/dev/null \
+            && echo "tor: bootstrapped" || echo "::warning::Tor did not bootstrap; Tor endpoints will be skipped"
+          for _ in $(seq 1 45); do
+            page=$(curl -s --max-time 5 http://127.0.0.1:7071/ | sed 's/<[^>]*>/ /g' | tr -s ' \n')
+            rate=$(echo "$page" | grep -oE 'Tunnel creation success rate: *[0-9]+' | grep -oE '[0-9]+$')
+            routers=$(echo "$page" | grep -oE 'Routers: *[0-9]+' | grep -oE '[0-9]+$')
+            if [ "${rate:-0}" -ge 40 ] && [ "${routers:-0}" -ge 300 ]; then
+              echo "i2pd: ready (success rate ${rate}%, ${routers} routers)"; break
+            fi
+            sleep 20
+          done
+
+      - name: Dial every reachable endpoint
+        run: |
+          PROXIES=""
+          nc -z 127.0.0.1 9050 2>/dev/null && PROXIES="$PROXIES --tor-socks 127.0.0.1:9050"
+          nc -z 127.0.0.1 4447 2>/dev/null && PROXIES="$PROXIES --i2p-socks 127.0.0.1:4447"
+          TIP=$(python3 -c 'import json; print(json.load(open("snapshot.json")).get("latest_height", 0))')
+          echo "proxies:${PROXIES:- none}; tip $TIP"
+          .build/release/WinnowCensus --input snapshot.json --parallel 128 --timeout 8 --hidden-timeout 30 \
+            --tip "$TIP" $PROXIES --out census.jsonl --summary-json summary.json | tee census-summary.txt
+
+      - name: Publish the aggregate
+        run: |
+          scripts/census-publish summary.json --dir census
+          git config user.name "winnow-census"
+          git config user.email "census@users.noreply.github.com"
+          git add census
+          git diff --cached --quiet && exit 0
+          git commit -q -m "census: $(date -u +%Y-%m-%d)"
+          git push -q origin HEAD:main
+
+      - name: Keep the per-node detail for two weeks
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: peer-census-${{ github.run_id }}
+          path: |
+            census.jsonl
+            census-summary.txt
+          retention-days: 14
