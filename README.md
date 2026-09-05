@@ -22,8 +22,12 @@ how many claim a chain that is not Bitcoin's.
 - `scripts/census-tables` — Markdown tables from a run's JSON lines, for a
   write-up.
 - `.github/workflows/peer-census.yml` — the daily run on a GitHub-hosted macOS
-  runner, which installs Tor and i2pd itself and commits the aggregate here.
-- `index.html` — the page, served by GitHub Pages from this branch.
+  runner, which installs Tor and i2pd itself, commits the aggregate here, and
+  deploys the site.
+- `.github/workflows/site.yml` — deploys `index.html` and `census/` to
+  Cloudflare Pages (project `winnow-census`, next to winnowwallet.com) on every
+  push to main. Needs the `CF_API_TOKEN` and `CF_ACCOUNT_ID` secrets.
+- `index.html` — the page.
 - `census/` — one aggregate per day. Per-node detail is a two-week workflow
   artifact; btcnodes already publishes the per-IP view.
 
