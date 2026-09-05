@@ -1,28 +1,45 @@
 #!/usr/bin/env python3
 """Files a WinnowCensus summary as <dir>/<date>.json and rebuilds
-<dir>/index.json, the list the site's /peer-census page reads.
+<dir>/index.json, the list the site reads.
 
-    scripts/census-publish summary.json --dir data/census [--date YYYY-MM-DD]
+    scripts/census-publish summary.json --dir census [--date YYYY-MM-DD] [--force]
+    scripts/census-publish --dir census          # rebuild the index only
 
-The directory is a checkout of the data-only `census-data` branch: main
-never carries a data commit, and the page reads the branch over GitHub's
-raw endpoint. Idempotent for a date: re-running replaces that day's file.
-The index keeps one line per day with the handful of numbers the trend
-chart needs, so the page never has to fetch every day's file to draw it.
+Idempotent for a date: re-running replaces that day's file. The index keeps
+one line per day with the handful of numbers the trend chart needs, so the
+page never has to fetch every day's file to draw it.
+
+A day is refused when any network's handshake rate (usable plus peers that
+answered without compact filters, over dialled) is under HANDSHAKE_FLOOR: a
+router that died partway through the dial turns thousands of reachable
+endpoints into timeouts, and such a day would sit on the chart as a collapse
+that never happened. --force files it anyway.
 """
 import argparse, json, os, sys
 
 parser = argparse.ArgumentParser()
-parser.add_argument("summary")
-parser.add_argument("--dir", required=True, help="the census/ directory of a census-data checkout")
+parser.add_argument("summary", nargs="?", help="a --summary-json file; omit to rebuild the index only")
+parser.add_argument("--dir", required=True, help="the census/ directory")
 parser.add_argument("--date", help="YYYY-MM-DD; default is the summary's generatedAt")
+parser.add_argument("--force", action="store_true", help="file the day even if a network's handshake rate is under the floor")
 args = parser.parse_args()
 CENSUS = os.path.abspath(args.dir)
+HANDSHAKE_FLOOR = 0.5
 
-summary = json.load(open(args.summary))
-date = args.date or summary["generatedAt"][:10]
-os.makedirs(CENSUS, exist_ok=True)
-json.dump(summary, open(os.path.join(CENSUS, f"{date}.json"), "w"), indent=2, sort_keys=True)
+summary = None
+if args.summary:
+    summary = json.load(open(args.summary))
+    date = args.date or summary["generatedAt"][:10]
+    for name, net in sorted(summary.get("networks", {}).items()):
+        dialled = net.get("dialled", 0)
+        if dialled == 0:
+            continue
+        rate = (net.get("usable", 0) + net.get("noCompactFilters", 0)) / dialled
+        if rate < HANDSHAKE_FLOOR and not args.force:
+            sys.exit(f"refusing to file {date}: {name} handshake rate {rate:.1%} of {dialled} dialled "
+                     f"is under {HANDSHAKE_FLOOR:.0%}; a router died during the dial (--force to file anyway)")
+    os.makedirs(CENSUS, exist_ok=True)
+    json.dump(summary, open(os.path.join(CENSUS, f"{date}.json"), "w"), indent=2, sort_keys=True)
 
 index = []
 for name in sorted(os.listdir(CENSUS)):
@@ -42,5 +59,8 @@ for name in sorted(os.listdir(CENSUS)):
         "coreUsable": families.get("Core", {}).get("usable", 0),
     })
 json.dump({"days": index}, open(os.path.join(CENSUS, "index.json"), "w"), indent=2)
-print(f"filed {date}: {summary['usable']} usable of {summary['dialled']} dialled, "
-      f"{summary['stuckAtSplit']} stuck at the split; index has {len(index)} day(s)")
+if summary:
+    print(f"filed {date}: {summary['usable']} usable of {summary['dialled']} dialled, "
+          f"{summary['stuckAtSplit']} stuck at the split; index has {len(index)} day(s)")
+else:
+    print(f"rebuilt the index: {len(index)} day(s)")
