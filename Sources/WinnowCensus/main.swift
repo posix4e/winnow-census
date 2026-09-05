@@ -48,6 +48,9 @@ struct Options: Sendable {
     /// usable peers report, which one liar in either direction cannot move.
     /// The snapshot's own latest_height is a good value to pass.
     var tip: Int32?
+    /// Summarise an earlier run's JSON lines instead of dialling: re-files a
+    /// day under a changed rule without touching the network.
+    var replay: URL?
 }
 
 struct Record: Codable, Sendable {
@@ -84,6 +87,7 @@ private func parseOptions() -> Options {
         case "--i2p-socks": options.i2pSocks = args.next().flatMap(parseHostPort)
         case "--hidden-timeout": options.hiddenTimeout = .seconds(Double(args.next() ?? "") ?? 25)
         case "--tip": options.tip = Int32(args.next() ?? "")
+        case "--replay": options.replay = args.next().map { URL(fileURLWithPath: $0) }
         case "--network":
             switch args.next() {
             case "mainnet": options.network = .mainnet
@@ -93,6 +97,7 @@ private func parseOptions() -> Options {
         case "--help", "-h":
             print("""
             usage: WinnowCensus --input nodes.json|nodes.txt [--out results.jsonl] [--summary-json summary.json]
+                   WinnowCensus --replay results.jsonl [--summary-json summary.json] [--tip HEIGHT]
                                 [--sample N] [--parallel 64] [--tor-parallel 32] [--i2p-parallel 64]
                                 [--timeout 8] [--feefilter-wait-ms 1500]
                                 [--tor-socks 127.0.0.1:9050] [--i2p-socks 127.0.0.1:4447] [--hidden-timeout 25]
@@ -103,7 +108,7 @@ private func parseOptions() -> Options {
             fatalError("unknown argument \(arg)")
         }
     }
-    guard options.input != nil else { fatalError("--input is required") }
+    if options.input == nil && options.replay == nil { fatalError("--input or --replay is required") }
     return options
 }
 
@@ -230,8 +235,10 @@ struct Summary: Codable {
     var splitHeight: Int32
     var stuckAtSplit: Int
     var behind: Int
-    /// Reporting a height more than 10 above the tip: a lying node, or one
-    /// on a chain that is not this one.
+    /// Reporting a height more than 100 above the tip: a lying node, or one
+    /// on a chain that is not this one. The margin is the same as "behind":
+    /// the tip passed in is a snapshot that ages a dozen blocks over an
+    /// hour-long dial, and honest peers sit a few blocks above it by the end.
     var aheadOfTip: Int
     var medianFeeFilterSatPerKvB: Int64?
     var handshakeLatencyMsMedian: Int?
@@ -275,7 +282,7 @@ func makeSummary(_ records: [Record], tip: Int32, splitHeight: Int32 = 961_632) 
     }
     let isStuck: (Record) -> Bool = { ($0.startHeight ?? 0) >= splitHeight && ($0.startHeight ?? 0) <= splitHeight + 20 }
     let isBehind: (Record) -> Bool = { tip - ($0.startHeight ?? 0) > 100 }
-    let isAhead: (Record) -> Bool = { ($0.startHeight ?? 0) - tip > 10 }
+    let isAhead: (Record) -> Bool = { ($0.startHeight ?? 0) - tip > 100 }
     var families: [String: Summary.Family] = [:]
     for (name, members) in Dictionary(grouping: ok, by: { family(of: $0.userAgent ?? "") }) {
         families[name] = Summary.Family(
@@ -325,10 +332,10 @@ private func summarize(_ records: [Record], tip: Int32, splitHeight: Int32 = 961
     print("  tip used to judge heights: \(tip)")
     let stuck = ok.filter { ($0.startHeight ?? 0) >= splitHeight && ($0.startHeight ?? 0) <= splitHeight + 20 }
     let behind = ok.filter { tip - ($0.startHeight ?? 0) > 100 }
-    let ahead = ok.filter { ($0.startHeight ?? 0) - tip > 10 }
+    let ahead = ok.filter { ($0.startHeight ?? 0) - tip > 100 }
     print("  at the BIP-110 split height (\(splitHeight)…\(splitHeight + 20)): \(stuck.count)  \(pct(stuck.count, ok.count))")
     print("  more than 100 blocks behind the tip:                \(behind.count)  \(pct(behind.count, ok.count))")
-    print("  claiming a chain taller than the tip:               \(ahead.count)  \(pct(ahead.count, ok.count))")
+    print("  more than 100 blocks above the tip (another chain):  \(ahead.count)  \(pct(ahead.count, ok.count))")
     let filters = ok.compactMap(\.feeFilterSatPerKvB).sorted()
     if !filters.isEmpty {
         print("  fee filter median \(filters[filters.count / 2]) sat/kvB, "
@@ -433,19 +440,39 @@ func crawlAll(_ endpoints: [PeerEndpoint], options: Options, output: FileHandle?
     }
 }
 
-let options = parseOptions()
-var endpoints = try loadEndpoints(from: options.input!, options: options)
-var generator = SeededGenerator(state: options.seed)
-endpoints.shuffle(using: &generator)
-if options.sample > 0 { endpoints = Array(endpoints.prefix(options.sample)) }
-FileHandle.standardError.write(Data("dialling \(endpoints.count) endpoints\n".utf8))
-var output: FileHandle?
-if let out = options.out {
-    FileManager.default.createFile(atPath: out.path, contents: nil)
-    output = try FileHandle(forWritingTo: out)
+/// Reads back the JSON lines an earlier run streamed out.
+func replayRecords(from url: URL) throws -> [Record] {
+    let decoder = JSONDecoder()
+    return try String(contentsOf: url, encoding: .utf8).split(separator: "\n")
+        .filter { !$0.isEmpty }
+        .map { try decoder.decode(Record.self, from: Data($0.utf8)) }
 }
-let records = await crawlAll(endpoints, options: options, output: output)
-try? output?.close()
+
+/// Either dials the input list or replays an earlier run's records.
+func collectRecords(options: Options) async throws -> [Record] {
+    if let replay = options.replay {
+        let records = try replayRecords(from: replay)
+        FileHandle.standardError.write(Data("replaying \(records.count) records from \(replay.lastPathComponent)\n".utf8))
+        return records
+    }
+    guard let input = options.input else { fatalError("--input or --replay is required") }
+    var endpoints = try loadEndpoints(from: input, options: options)
+    var generator = SeededGenerator(state: options.seed)
+    endpoints.shuffle(using: &generator)
+    if options.sample > 0 { endpoints = Array(endpoints.prefix(options.sample)) }
+    FileHandle.standardError.write(Data("dialling \(endpoints.count) endpoints\n".utf8))
+    var output: FileHandle?
+    if let out = options.out {
+        FileManager.default.createFile(atPath: out.path, contents: nil)
+        output = try FileHandle(forWritingTo: out)
+    }
+    let records = await crawlAll(endpoints, options: options, output: output)
+    try? output?.close()
+    return records
+}
+
+let options = parseOptions()
+let records = try await collectRecords(options: options)
 let tip = observedTip(records, override: options.tip)
 if let summaryURL = options.summary {
     let encoder = JSONEncoder()

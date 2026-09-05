@@ -59,7 +59,15 @@ Distinct usable nodes lie somewhere between the clearnet count and the total.
 **Heights are claims.** A `version.startHeight` is whatever the peer says. The
 tool judges peers against the snapshot's `latest_height` (or the median of
 what usable peers report) rather than any top percentile, because nodes on
-other chains claim heights well above Bitcoin's.
+other chains claim heights well above Bitcoin's. "Behind" and "ahead" both
+use a 100-block margin: the snapshot ages a dozen blocks over an hour-long
+dial, so honest peers end a few blocks above it, while another chain's nodes
+sit thousands above.
+
+**Days can be re-filed.** `WinnowCensus --replay census.jsonl --tip N
+--summary-json day.json` rebuilds a day's summary from the run's JSON lines
+(the two-week workflow artifact) without dialling, so a changed rule can be
+applied to a past day.
 
 The first run, 2026-09-04, and the stall in the wallet that prompted it, are
 written up in [One in Twelve Peers Is on a Dead Chain](https://apnewman.com/p/dead-chain-peers/).
