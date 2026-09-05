@@ -2,7 +2,7 @@
 
 Every reachable Bitcoin endpoint, dialled daily with the same handshake the
 [Winnow](https://github.com/posix4e/winnow) wallet uses, and published at
-**https://posix4e.github.io/winnow-census/**.
+**https://census.winnowwallet.com/**.
 
 A peer that fails Winnow's handshake, which requires `NODE_COMPACT_FILTERS`, is
 one the wallet could never seat. So the numbers here describe a compact-filter
