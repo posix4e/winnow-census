@@ -32,6 +32,17 @@
       "knotsUsable": 1554,
       "knotsStuck": 565,
       "coreUsable": 5739
+    },
+    {
+      "date": "2026-09-07",
+      "dialled": 26834,
+      "usable": 7469,
+      "observedTip": 965885,
+      "stuckAtSplit": 560,
+      "behind": 577,
+      "knotsUsable": 1591,
+      "knotsStuck": 559,
+      "coreUsable": 5861
     }
   ]
 }
