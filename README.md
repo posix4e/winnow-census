@@ -1,13 +1,17 @@
 # Winnow peer census
 
+Canonical repository: [winnowwallet/census](https://github.com/winnowwallet/census).
+Engineering changes and daily data belong to the Winnow organization.
+The existing `winnow-census` Cloudflare Worker and census.winnowwallet.com
+domain are retained; the Worker name is a deployment identifier.
+
 Every reachable Bitcoin endpoint, dialled daily with the same handshake the
 [Winnow](https://github.com/winnowwallet/winnow) wallet uses, and published at
 **https://census.winnowwallet.com/**.
 
-A peer that fails Winnow's handshake, which requires `NODE_COMPACT_FILTERS`, is
-one the wallet could never seat. So the numbers here describe a compact-filter
-wallet's world, not the abstract network: how many endpoints serve filters at
-all, how many of those are at the tip, how many are stuck on a dead chain, and
+A successful Winnow version handshake requires advertised `NODE_COMPACT_FILTERS`.
+It does not verify a compact-filter response or establish peer honesty. The
+numbers describe endpoints eligible for further wallet checks: how many advertise filters, how many of those are at the tip, how many are stuck on a dead chain, and
 how many claim a chain that is not Bitcoin's.
 
 ## What is here
@@ -54,7 +58,8 @@ scripts/census-tables census.jsonl
 **Endpoints, not nodes.** One node can listen on clearnet, Tor and I2P at once,
 and Bitcoin Core deliberately makes linking a node's addresses across networks
 hard, so the census cannot tell how many endpoints are doors into the same node.
-Distinct usable nodes lie somewhere between the clearnet count and the total.
+The census does not estimate unique physical nodes; even multiple clearnet
+addresses can belong to one node.
 
 **Heights are claims.** A `version.startHeight` is whatever the peer says. The
 tool judges peers against the snapshot's `latest_height` (or the median of

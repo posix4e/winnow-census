@@ -29,6 +29,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.repository == 'winnowwallet/census'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

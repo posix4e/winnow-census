@@ -30,6 +30,10 @@ on:
         type: boolean
         default: true
 
+defaults:
+  run:
+    shell: bash --noprofile --norc -e -o pipefail {0}
+
 permissions:
   contents: write
 
@@ -39,14 +43,26 @@ concurrency:
 
 jobs:
   census:
+    if: github.repository == 'winnowwallet/census'
     runs-on: macos-latest
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
+      - name: Validate run scope
+        env:
+          SAMPLE: ${{ inputs.sample || '0' }}
+          PUBLISH: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
+        run: |
+          [[ "$SAMPLE" =~ ^[0-9]+$ ]] || { echo "::error::sample must be a nonnegative integer"; exit 1; }
+          if [[ "$PUBLISH" == "true" && "$SAMPLE" != "0" ]]; then
+            echo "::error::Diagnostic samples cannot publish production data"
+            exit 1
+          fi
+
       - name: Fetch the day's snapshot
         run: |
-          curl -sSL --max-time 120 -A "winnow-census/0.1 (+https://github.com/posix4e/winnow-census)" \
+          curl -fsSL --max-time 120 -A "winnow-census/0.1 (+https://github.com/winnowwallet/census)" \
             -o snapshot.json "https://btcnodes.io/api/v1/snapshots/latest/"
           python3 -c 'import json; d=json.load(open("snapshot.json")); print(len(d["nodes"]), "reachable endpoints, tip", d.get("latest_height"))'
 
@@ -110,9 +126,10 @@ jobs:
         # The router logs and a health line at the end go into the artifact:
         # the second run lost every Tor handshake a quarter of the way in,
         # and nothing in the job output said why.
+        env:
+          SAMPLE: ${{ inputs.sample || '0' }}
         run: |
           TIP=$(python3 -c 'import json; print(json.load(open("snapshot.json")).get("latest_height", 0))')
-          SAMPLE="${{ inputs.sample || '0' }}"
           SAMPLE_FLAG=""; [ "$SAMPLE" = "0" ] || SAMPLE_FLAG="--sample $SAMPLE"
           echo "tip $TIP; sample ${SAMPLE}; fd limit $(ulimit -n); $(tor --version | head -n 1)"
           .build/release/WinnowCensus --input snapshot.json --parallel 128 --tor-parallel 48 --i2p-parallel 64 \
@@ -163,10 +180,13 @@ jobs:
           command: deploy
 
       - name: Keep the per-node detail for two weeks
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: peer-census-${{ github.run_id }}
           path: |
+            snapshot.json
+            summary.json
             census.jsonl
             census-summary.txt
             tor.log
