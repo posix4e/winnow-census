@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "runs": [
+    {
+      "summary": "../../comparison/2026-09-13-full/winnow.gz",
+      "records": "../../comparison/2026-09-13-full/winnow_records.gz"
+    }
+  ]
+}
