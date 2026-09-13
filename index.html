@@ -70,6 +70,15 @@
 <h2 id="measurements"><span class="index">01</span>Daily observations</h2>
 <div class="plot" tabindex="0" aria-label="Scrollable daily observation chart"><svg id="trend" viewBox="0 0 720 220" role="img" aria-label="Compact-filter handshake share over time; missing days are gaps"></svg></div>
 <div class="legend"><span>Filter handshakes / attempts</span><span>Split-height reports / filter handshakes</span></div><p class="note">A missing day stays missing. Older runs used the previous height policy; their artifacts keep that history.</p>
+<section aria-labelledby="health-heading">
+<h2 id="health-heading">Bitcoin health / experimental</h2>
+<p class="reading">I want to measure whether the same endpoints keep answering, what they support, and how mining changes over time. One scan cannot answer the first question. An old version string is not a diagnosis.</p>
+<p id="health-status" class="note" role="status">Loading the health baseline…</p>
+<div class="wrap"><table id="health-components"><thead><tr><th>Component</th><th>Observation</th><th>What it means</th></tr></thead><tbody></tbody></table></div>
+<div class="plot" tabindex="0" aria-label="Scrollable estimated mining hashrate chart"><svg id="mining-trend" viewBox="0 0 720 220" role="img" aria-label="Mempool estimated hashrate in exahashes per second; missing dates are gaps"></svg></div>
+<p class="note">Hashrate is estimated from mined work and time. Short windows include block-arrival noise. Pool attribution is not miner ownership. Missing evidence stays missing; no overall score is assigned yet.</p>
+<p><a href="census/health.json">Baseline components and provenance</a> · <a href="https://github.com/winnowwallet/census/blob/main/HEALTH.md">Definitions and reproducible calculation</a> · <a href="https://mempool.space/docs/api/rest">Mining source methodology and API</a></p>
+</section>
 <h2><span class="index">02</span>What answered</h2>
 <div class="wrap"><table id="outcomes"><thead><tr><th>Outcome</th><th>Endpoints</th><th>Share of attempts</th></tr></thead><tbody></tbody></table></div>
 <div class="wrap"><table id="networks"><thead><tr><th>Transport</th><th>Attempts</th><th>Compact-filter handshake</th><th>Answered without filters</th><th>Near tip, of filter handshakes</th></tr></thead><tbody></tbody></table></div>
@@ -126,6 +135,49 @@ curl -fsSL https://btcnodes.io/api/v1/snapshots/latest/ -o snapshot.json
     for(const s of series){let previous=null;for(const d of days){const v=s.value(d);if(v==null){previous=null;continue;}if(previous && Date.parse(d.date)-Date.parse(previous.date)===86400000)add('line',{x1:x(previous),y1:y(s.value(previous)),x2:x(d),y2:y(v),stroke:s.color,'stroke-width':2});add('circle',{cx:x(d),cy:y(v),r:3,fill:s.color});previous=d;}}
     days.forEach((d,i)=>{if(i%Math.max(1,Math.ceil(days.length/7))===0 || i===days.length-1)add('text',{x:x(d),y:210,fill:'currentColor','font-size':13,'text-anchor':'middle'},d.date.slice(5));});
   } catch(error) { document.getElementById('freshness').textContent='Census data could not be loaded: '+error.message; }
+})();
+</script>
+<script>
+(async () => {
+  const status = document.getElementById('health-status');
+  try {
+    const response = await fetch('census/health.json');
+    if (!response.ok) throw new Error('baseline unavailable');
+    const health = await response.json();
+    if (health.schemaVersion !== 1) throw new Error('unknown baseline format');
+    const mining = health.mining;
+    status.textContent = 'Baseline evaluated '+health.asOf+'. Accepted census days: '+health.acceptedDays.join(', ')+'. Mining retrieved '+(mining.source?.retrievedAt || 'unavailable')+'. These are different observation windows.';
+    const rows = [
+      ['Endpoint consistency', health.acceptedDays.length+' accepted day(s)', 'Requires at least three observed days per endpoint. Missing attempts are not failures.'],
+      ['Reported services', 'Separate from consistency', 'Advertisements describe capabilities; they do not prove correct responses.'],
+      ['Estimated hashrate', Number.isFinite(mining.currentHashrateEHs) ? mining.currentHashrateEHs.toFixed(1)+' EH/s' : 'Unavailable', 'Source current estimate; exact averaging window unavailable.'],
+      ['Difficulty', Number.isFinite(mining.currentDifficulty) ? (mining.currentDifficulty/1e12).toFixed(2)+' trillion' : 'Unavailable', 'Proof-of-work difficulty reported by the mining source.'],
+      ['Pool concentration / block intervals', 'Unavailable', 'No preserved measurement in this baseline.'],
+      ['Overall Bitcoin health index', 'Not yet scored', 'Requires repeated observations and a published, tested composite model.']
+    ];
+    const body = document.querySelector('#health-components tbody');
+    for (const row of rows) {
+      const tr = document.createElement('tr');
+      for (const value of row) { const td = document.createElement('td'); td.textContent=value; tr.append(td); }
+      body.append(tr);
+    }
+    const points = mining.hashrateSeries || [];
+    if (!points.length) return;
+    const svg = document.getElementById('mining-trend'), ns='http://www.w3.org/2000/svg';
+    const add=(tag,attrs,text)=>{const e=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))e.setAttribute(k,v);if(text)e.textContent=text;svg.append(e);};
+    const low=Math.floor(Math.min(...points.map(p=>p.hashrateEHs))/100)*100;
+    const high=Math.ceil(Math.max(...points.map(p=>p.hashrateEHs))/100)*100;
+    const first=points[0].timestamp,last=points[points.length-1].timestamp;
+    const x=p=>64+(p.timestamp-first)/(last-first || 86400)*625;
+    const y=v=>180-(v-low)/(high-low || 100)*155;
+    for (let i=0;i<=4;i++) { const value=low+(high-low)*i/4;add('line',{x1:64,x2:689,y1:y(value),y2:y(value),stroke:'var(--rule)'});add('text',{x:56,y:y(value)+4,'text-anchor':'end',fill:'currentColor','font-size':13},value.toFixed(0)); }
+    add('text',{x:64,y:16,fill:'currentColor','font-size':13},'Estimated EH/s');
+    points.forEach((p,i)=>{
+      if(i && p.timestamp-points[i-1].timestamp===86400) add('line',{x1:x(points[i-1]),y1:y(points[i-1].hashrateEHs),x2:x(p),y2:y(p.hashrateEHs),stroke:'var(--accent)','stroke-width':2});
+      add('circle',{cx:x(p),cy:y(p.hashrateEHs),r:2.5,fill:'var(--accent)'});
+      if(i%7===0 || i===points.length-1) add('text',{x:x(p),y:210,fill:'currentColor','font-size':13,'text-anchor':'middle'},new Date(p.timestamp*1000).toISOString().slice(5,10));
+    });
+  } catch(error) { status.textContent='Health baseline could not be loaded: '+error.message; }
 })();
 </script>
 </body>

@@ -86,5 +86,5 @@ evaluation timestamp makes replay deterministic. The first baseline covers
 A preserved Mempool snapshot supplies estimated hashrate and difficulty; pool
 attribution and block intervals remain unavailable. The manifest explicitly
 records that capture used JSON text from web retrieval, not HTTP wire bytes.
-The tool is an offline first step; daily collection and the public component
-dashboard are still under development.
+The component dashboard labels this as a dated experimental baseline. Daily
+collection and a tested numerical composite remain under development.
