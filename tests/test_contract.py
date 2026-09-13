@@ -46,6 +46,13 @@ class ContractTests(unittest.TestCase):
         result = subprocess.run([str(ROOT / 'scripts/census-publish'), str(self.root / 'summary.json'), '--peers', str(self.root / 'peers.json'),
                                  '--records', str(self.root / 'records.jsonl'), '--validator', str(BIN), '--dir', str(self.root / 'public')], capture_output=True)
         self.assertEqual(result.returncode == 0, success, result.stderr.decode())
+    def test_production_peer_catalog_is_trackable(self):
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        (self.root / ".gitignore").write_bytes((ROOT / ".gitignore").read_bytes())
+        for path, ignored in [("peers.json", True), ("census/peers.json", False)]:
+            result = subprocess.run(["git", "check-ignore", "--no-index", path], cwd=self.root, capture_output=True)
+            self.assertEqual(result.returncode == 0, ignored, path)
+
     def test_replay_dates_and_complete_publication(self):
         s, p = self.run_records(self.full())
         self.assertEqual(s['generatedAt'], DATE)

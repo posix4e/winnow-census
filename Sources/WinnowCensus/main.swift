@@ -271,10 +271,8 @@ struct Summary: Codable {
     var splitHeight: Int32
     var stuckAtSplit: Int
     var behind: Int
-    /// Reporting a height more than 100 above the tip: a lying node, or one
-    /// on a chain that is not this one. The margin is the same as "behind":
-    /// the tip passed in is a snapshot that ages a dozen blocks over an
-    /// hour-long dial, and honest peers sit a few blocks above it by the end.
+    /// Reporting more than 100 blocks above the reference snapshot height.
+    /// This observation alone cannot identify the cause or the peer's chain.
     var aheadOfTip: Int
     var medianFeeFilterSatPerKvB: Int64?
     var handshakeLatencyMsMedian: Int?

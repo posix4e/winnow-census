@@ -10,6 +10,6 @@ node_modules/
 
 Packages/
 .swiftpm/
-peers.json
+/peers.json
 
 __pycache__/
