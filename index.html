@@ -77,7 +77,7 @@
 <div class="wrap"><table id="health-components"><thead><tr><th>Component</th><th>Observation</th><th>What it means</th></tr></thead><tbody></tbody></table></div>
 <div class="plot" tabindex="0" aria-label="Scrollable estimated mining hashrate chart"><svg id="mining-trend" viewBox="0 0 720 220" role="img" aria-label="Mempool estimated hashrate in exahashes per second; missing dates are gaps"></svg></div>
 <p class="note">Hashrate is estimated from mined work and time. Short windows include block-arrival noise. Pool attribution is not miner ownership. Missing evidence stays missing; no overall score is assigned yet.</p>
-<p><a href="census/health.json">Baseline components and provenance</a> · <a href="https://github.com/winnowwallet/census/blob/main/HEALTH.md">Definitions and reproducible calculation</a> · <a href="https://mempool.space/docs/api/rest">Mining source methodology and API</a></p>
+<p><a href="census/health.json">Baseline components and provenance</a> · <a id="health-nodes-link" hidden>Per-endpoint observations (JSON.gz)</a> · <a href="https://github.com/winnowwallet/census/blob/main/HEALTH.md">Definitions and reproducible calculation</a> · <a href="https://mempool.space/docs/api/rest">Mining source methodology and API</a></p>
 </section>
 <h2><span class="index">02</span>What answered</h2>
 <div class="wrap"><table id="outcomes"><thead><tr><th>Outcome</th><th>Endpoints</th><th>Share of attempts</th></tr></thead><tbody></tbody></table></div>
@@ -148,7 +148,7 @@ curl -fsSL https://btcnodes.io/api/v1/snapshots/latest/ -o snapshot.json
     const mining = health.mining;
     status.textContent = 'Baseline evaluated '+health.asOf+'. Accepted census days: '+health.acceptedDays.join(', ')+'. Mining retrieved '+(mining.source?.retrievedAt || 'unavailable')+'. These are different observation windows.';
     const rows = [
-      ['Endpoint consistency', health.acceptedDays.length+' accepted day(s)', 'Requires at least three observed days per endpoint. Missing attempts are not failures.'],
+      ['Endpoint consistency', (health.assessedNodeCount || 0).toLocaleString()+' / '+health.nodeCount.toLocaleString()+' endpoints assessed', 'At least three attempted days per endpoint in a rolling 30-day observed population. Missing attempts are not failures.'],
       ['Reported services', 'Separate from consistency', 'Advertisements describe capabilities; they do not prove correct responses.'],
       ['Estimated hashrate', Number.isFinite(mining.currentHashrateEHs) ? mining.currentHashrateEHs.toFixed(1)+' EH/s' : 'Unavailable', 'Source current estimate; exact averaging window unavailable.'],
       ['Difficulty', Number.isFinite(mining.currentDifficulty) ? (mining.currentDifficulty/1e12).toFixed(2)+' trillion' : 'Unavailable', 'Proof-of-work difficulty reported by the mining source.'],
@@ -156,6 +156,10 @@ curl -fsSL https://btcnodes.io/api/v1/snapshots/latest/ -o snapshot.json
       ['Overall Bitcoin health index', 'Not yet scored', 'Requires repeated observations and a published, tested composite model.']
     ];
     const body = document.querySelector('#health-components tbody');
+    if (/^health-nodes-[a-f0-9]{64}\.json\.gz$/.test(health.nodesArtifact?.file || '')) {
+      const link = document.getElementById('health-nodes-link');
+      link.href = 'census/' + health.nodesArtifact.file; link.hidden = false;
+    }
     for (const row of rows) {
       const tr = document.createElement('tr');
       for (const value of row) { const td = document.createElement('td'); td.textContent=value; tr.append(td); }

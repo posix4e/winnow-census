@@ -149,6 +149,14 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
         run: |
           scripts/census-publish summary.json --peers peers.json --records census.jsonl --dir census
+          # Health is supplementary. Its pointer is replaced only after a
+          # complete calculation; external mining availability cannot prevent
+          # publication of an accepted peer census.
+          if python3 scripts/collect_health.py --summary summary.json --records census.jsonl; then
+            git add health-evidence
+          else
+            echo "::warning::Health update failed; retaining the previous health baseline"
+          fi
           git config user.name "winnow-census"
           git config user.email "census@users.noreply.github.com"
           git add census

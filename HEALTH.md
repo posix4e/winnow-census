@@ -87,4 +87,20 @@ A preserved Mempool snapshot supplies estimated hashrate and difficulty; pool
 attribution and block intervals remain unavailable. The manifest explicitly
 records that capture used JSON text from web retrieval, not HTTP wire bytes.
 The component dashboard labels this as a dated experimental baseline. Daily
-collection and a tested numerical composite remain under development.
+collection follows each accepted full census. `scripts/collect_health.py`
+archives the hash-linked raw records and summary, selects the latest accepted
+observation window per UTC start day (hash breaks exact ties), and writes a new
+compressed endpoint report before replacing the public component pointer. Multiple
+same-day scans count as one day. Old evidence remains retained; calculation uses
+the latest 30 days. Mining retrieval is bounded, and its last good snapshot keeps
+its original timestamp when a new request fails. Health update failure cannot
+block publication of the accepted peer catalog. The tested numerical composite
+remains under development.
+
+```sh
+python3 scripts/collect_health.py --summary summary.json --records census.jsonl
+```
+
+Use `--offline` to reuse preserved mining evidence without a network request.
+Per-endpoint downloads expose individual daily outcomes and denominators; they
+do not certify that an endpoint belongs to the same machine over time.

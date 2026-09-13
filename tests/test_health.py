@@ -5,9 +5,12 @@ import json
 from pathlib import Path
 import sys
 import unittest
+import tempfile
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from census_health import calculate, mining
+from collect_health import collect, select_days
 
 
 def run(day=13, height=100, outcome='ok'):
@@ -92,3 +95,28 @@ class HealthTests(unittest.TestCase):
             meta = dict(schemaVersion=1, sha256=hashlib.sha256(raw).hexdigest(), retrievedAt='2026-09-13T17:00:00Z')
             with self.assertRaises(ValueError):
                 mining(raw, meta, self.now)
+
+    def test_daily_selection_is_explicit_and_deterministic(self):
+        early = run(13, 99)
+        late = run(13, 100)
+        late[0]['observationEndedAt'] = '2026-09-13T13:00:00Z'
+        self.assertEqual(select_days([early, late], self.now), [late])
+        self.assertEqual(select_days([late, early], self.now), [late])
+
+    def test_collection_preserves_good_pointer_on_failure_and_replay(self):
+        with tempfile.TemporaryDirectory() as temporary, patch('collect_health.subprocess.check_output', return_value='a' * 40):
+            root = Path(temporary)
+            summary, raw = run()
+            collect(root, summary, raw, self.now, offline=True)
+            output = root / 'census/health.json'
+            previous = output.read_bytes()
+            report = json.loads(previous)
+            self.assertEqual(report['assessedNodeCount'], 0)
+            artifact = root / 'census' / report['nodesArtifact']['file']
+            self.assertEqual(hashlib.sha256(artifact.read_bytes()).hexdigest(), report['nodesArtifact']['sha256'])
+            collect(root, summary, raw, self.now, offline=True)
+            self.assertEqual(output.read_bytes(), previous)
+            summary['sample'] = 1
+            with self.assertRaises(ValueError):
+                collect(root, summary, raw, self.now, offline=True)
+            self.assertEqual(output.read_bytes(), previous)
