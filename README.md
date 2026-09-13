@@ -1,7 +1,7 @@
 # Winnow peer census
 
 Every reachable Bitcoin endpoint, dialled daily with the same handshake the
-[Winnow](https://github.com/posix4e/winnow) wallet uses, and published at
+[Winnow](https://github.com/winnowwallet/winnow) wallet uses, and published at
 **https://census.winnowwallet.com/**.
 
 A peer that fails Winnow's handshake, which requires `NODE_COMPACT_FILTERS`, is
@@ -71,8 +71,9 @@ applied to a past day.
 
 The first run, 2026-09-04, and the stall in the wallet that prompted it, are
 written up in [One in Twelve Peers Is on a Dead Chain](https://apnewman.com/p/dead-chain-peers/).
-The tool began life as posix4e/winnow#176 and moved here so the wallet's
-history never carries a daily data commit.
+The tool began life as a pull request against the wallet's old repository
+(since deleted) and moved here so the wallet's history never carries a daily
+data commit.
 
 ## Deploying
 

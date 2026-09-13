@@ -1,7 +1,6 @@
-import BitcoinCore
-import BitcoinP2P
 import Darwin
 import Foundation
+import WalletCore
 
 /// Peer census: dial a list of nodes with the same `PeerConnection` the app
 /// uses and record what each one reports in its handshake — user agent,

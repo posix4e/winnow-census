@@ -1,5 +1,5 @@
 {
-  "originHash" : "9a229a6a4ebb811d51bf78fceac394e4c68d590df76ef8da0134ce2a6d1352a0",
+  "originHash" : "0025dc178fc913f4f2b8f959a98ed61d871bc055e8b59191c47cb7e529959255",
   "pins" : [
     {
       "identity" : "swift-secp256k1",
@@ -13,10 +13,10 @@
     {
       "identity" : "winnow",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/posix4e/winnow",
+      "location" : "https://github.com/winnowwallet/winnow",
       "state" : {
-        "branch" : "feat/socks-proxy",
-        "revision" : "f05b0f2e04306eb2c8998464a15a507612bc52d1"
+        "branch" : "main",
+        "revision" : "8b64f4d29ba9589c229fe07d34cb31319dbb8a39"
       }
     }
   ],

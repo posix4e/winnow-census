@@ -51,6 +51,11 @@ jobs:
           python3 -c 'import json; d=json.load(open("snapshot.json")); print(len(d["nodes"]), "reachable endpoints, tip", d.get("latest_height"))'
 
       - name: Build
+        # The wallet repo keeps its docs screenshots in Git LFS, and its LFS
+        # objects do not resolve for SwiftPM's anonymous fetch. The census
+        # builds only WalletCore, so skip the smudge filter entirely.
+        env:
+          GIT_LFS_SKIP_SMUDGE: "1"
         run: swift build -c release --product WinnowCensus
 
       - name: Start Tor and an I2P router
