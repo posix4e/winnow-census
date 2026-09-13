@@ -19,7 +19,8 @@ how many claim a chain that is not Bitcoin's.
   through local SOCKS5 proxies when `--tor-socks` / `--i2p-socks` are given,
   each overlay on its own queue with its own ceiling (`--parallel`,
   `--tor-parallel`, `--i2p-parallel`): a Tor client saturates, rather than
-  queues, past a few dozen concurrent rendezvous.
+  queues, past a few dozen concurrent rendezvous. `--peer-list` turns a run's
+  JSON lines into `census/peers.json`, the wallet's fallback-peer list (below).
 - `scripts/census-publish` — files a run's summary under `census/<date>.json`
   and rebuilds `census/index.json`.
 - `scripts/census-tables` — Markdown tables from a run's JSON lines, for a
@@ -33,8 +34,48 @@ how many claim a chain that is not Bitcoin's.
   certificate from Cloudflare on deploy. Needs the `CF_API_TOKEN` and
   `CF_ACCOUNT_ID` secrets; see "Deploying" below.
 - `index.html` — the page.
-- `census/` — one aggregate per day. Per-node detail is a two-week workflow
-  artifact; btcnodes already publishes the per-IP view.
+- `census/` — one aggregate per day, plus the permanent `peers.json` (below).
+  Other per-node detail is a two-week workflow artifact; btcnodes already
+  publishes the per-IP view.
+
+## The peer list (`census/peers.json`)
+
+The one per-node artifact kept permanently. Each run derives a wallet-grade
+verified peer list from the day's JSON lines, and the wallet repo consumes it
+at release time to render its bundled fallback peers:
+
+```sh
+WinnowCensus --peer-list census.jsonl --tip HEIGHT --out census/peers.json
+```
+
+```json
+{
+  "schemaVersion": 1,
+  "date": "2026-09-13",
+  "tip": 966774,
+  "networks": {
+    "clearnet": [{"host": "1.2.3.4", "port": 8333, "userAgent": "/Satoshi:31.1.0/", "startHeight": 966770}],
+    "tor":      [{"host": "abc…xyz.onion", "port": 8333, "userAgent": "…", "startHeight": 966770}],
+    "i2p":      [{"host": "….b32.i2p", "port": 8333, "userAgent": "…", "startHeight": 966770}]
+  }
+}
+```
+
+`date` is the run day (UTC), `tip` the height the run judged peers against.
+Entries are sorted by host, then port. Every entry completed Winnow's
+handshake (so it advertises `NODE_COMPACT_FILTERS`) and sits within 100
+blocks of the tip in either direction — ahead of tip is another chain, not a
+faster peer. On top of that:
+
+- **clearnet** satisfies the wallet's PeerPolicyTests invariants: public IP
+  literals only (no hostnames), port 8333, at most one entry per IPv4 /16
+  (IPv6 /32) netblock.
+- **tor** / **i2p** keep their hostnames and any port, and are capped at
+  2,000 entries per overlay — when a run yields more, the survivors are the
+  quickest to answer (lowest handshake latency).
+
+The per-node JSON lines stay a 14-day workflow artifact; this file is the
+carve-out, a product for the wallet rather than a census view.
 
 ## Run it yourself
 

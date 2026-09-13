@@ -50,6 +50,9 @@ struct Options: Sendable {
     /// Summarise an earlier run's JSON lines instead of dialling: re-files a
     /// day under a changed rule without touching the network.
     var replay: URL?
+    /// Build the wallet's verified peer list (census/peers.json) from an
+    /// earlier run's JSON lines instead of dialling. Requires --out.
+    var peerList: URL?
 }
 
 struct Record: Codable, Sendable {
@@ -87,6 +90,7 @@ private func parseOptions() -> Options {
         case "--hidden-timeout": options.hiddenTimeout = .seconds(Double(args.next() ?? "") ?? 25)
         case "--tip": options.tip = Int32(args.next() ?? "")
         case "--replay": options.replay = args.next().map { URL(fileURLWithPath: $0) }
+        case "--peer-list": options.peerList = args.next().map { URL(fileURLWithPath: $0) }
         case "--network":
             switch args.next() {
             case "mainnet": options.network = .mainnet
@@ -97,6 +101,7 @@ private func parseOptions() -> Options {
             print("""
             usage: WinnowCensus --input nodes.json|nodes.txt [--out results.jsonl] [--summary-json summary.json]
                    WinnowCensus --replay results.jsonl [--summary-json summary.json] [--tip HEIGHT]
+                   WinnowCensus --peer-list results.jsonl --out peers.json [--tip HEIGHT]
                                 [--sample N] [--parallel 64] [--tor-parallel 32] [--i2p-parallel 64]
                                 [--timeout 8] [--feefilter-wait-ms 1500]
                                 [--tor-socks 127.0.0.1:9050] [--i2p-socks 127.0.0.1:4447] [--hidden-timeout 25]
@@ -107,7 +112,10 @@ private func parseOptions() -> Options {
             fatalError("unknown argument \(arg)")
         }
     }
-    if options.input == nil && options.replay == nil { fatalError("--input or --replay is required") }
+    if options.input == nil && options.replay == nil && options.peerList == nil {
+        fatalError("--input, --replay or --peer-list is required")
+    }
+    if options.peerList != nil && options.out == nil { fatalError("--peer-list requires --out") }
     return options
 }
 
@@ -471,11 +479,21 @@ func collectRecords(options: Options) async throws -> [Record] {
 }
 
 let options = parseOptions()
-let records = try await collectRecords(options: options)
-let tip = observedTip(records, override: options.tip)
-if let summaryURL = options.summary {
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-    try encoder.encode(makeSummary(records, tip: tip)).write(to: summaryURL)
+if let peerListURL = options.peerList {
+    let records = try replayRecords(from: peerListURL)
+    let tip = observedTip(records, override: options.tip)
+    let list = try writePeerList(records, tip: tip, to: options.out!)
+    let counts = "peers.json (\(peerListURL.lastPathComponent), tip \(tip)): "
+        + "\(list.networks.clearnet.count) clearnet, \(list.networks.tor.count) tor, "
+        + "\(list.networks.i2p.count) i2p\n"
+    FileHandle.standardError.write(Data(counts.utf8))
+} else {
+    let records = try await collectRecords(options: options)
+    let tip = observedTip(records, override: options.tip)
+    if let summaryURL = options.summary {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try encoder.encode(makeSummary(records, tip: tip)).write(to: summaryURL)
+    }
+    summarize(records, tip: tip)
 }
-summarize(records, tip: tip)
