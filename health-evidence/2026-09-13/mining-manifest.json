@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "url": "https://mempool.space/api/v1/mining/hashrate/1m",
+  "retrievedAt": "2026-09-13T18:59:14Z",
+  "file": "mining-hashrate.json",
+  "sha256": "6da4c202cfe09e7156ff3272529262020d5dac4058504aa1dd4de9ed58011e6e",
+  "captureMethod": "JSON text returned by web retrieval; HTTP wire bytes and response headers unavailable",
+  "observationWindow": "Per-point timestamps supplied by source; current estimate exact averaging window not supplied in this response",
+  "poolAttribution": {
+    "status": "unavailable",
+    "url": "https://mempool.space/api/v1/mining/pools/1w",
+    "reason": "Direct capture timed out; web retrieval unavailable."
+  }
+}

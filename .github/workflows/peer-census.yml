@@ -14,10 +14,9 @@ name: Peer census
 # Tor or I2P would not be comparable with the others, and the first run showed
 # what that looks like (Tor took longer than three minutes to bootstrap, its
 # SOCKS port was already listening, and half the usable peers vanished). The
-# per-node JSON lines are kept as a 14-day artifact rather than committed:
-# btcnodes already publishes the per-IP view. The one exception is
-# census/peers.json, the wallet's verified fallback-peer list, derived from
-# the run and committed with the aggregate.
+# per-node JSON lines are retained in the 14-day diagnostic artifact and,
+# for accepted health observations, a compressed hash-linked evidence archive.
+# census/peers.json is derived from the same accepted run as the aggregate.
 
 on:
   schedule:
@@ -149,6 +148,14 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
         run: |
           scripts/census-publish summary.json --peers peers.json --records census.jsonl --dir census
+          # Health is supplementary. Its pointer is replaced only after a
+          # complete calculation; external mining availability cannot prevent
+          # publication of an accepted peer census.
+          if python3 scripts/collect_health.py --summary summary.json --records census.jsonl; then
+            git add health-evidence
+          else
+            echo "::warning::Health update failed; retaining the previous health baseline"
+          fi
           git config user.name "winnow-census"
           git config user.email "census@users.noreply.github.com"
           git add census
