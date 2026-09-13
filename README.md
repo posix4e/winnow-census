@@ -64,7 +64,7 @@ WinnowCensus --peer-list census.jsonl --tip HEIGHT --out census/peers.json
 ```
 
 `date` is the original observation day (UTC), preserved during replay, `tip` the height the run judged peers against.
-Entries are selected by latency with deterministic host, port, user-agent and height tie-breakers. Every entry completed Winnow's
+Entries are selected by elapsed probe duration with deterministic host, port, user-agent and height tie-breakers. Every entry completed Winnow's
 handshake (so it advertises `NODE_COMPACT_FILTERS`) and sits within 100
 blocks of the reference tip in either direction. A height outside that tolerance is excluded without assuming why it differs. On top of that:
 
@@ -73,7 +73,7 @@ blocks of the reference tip in either direction. A height outside that tolerance
   (IPv6 /32) netblock.
 - **tor** / **i2p** keep their hostnames and any port, and are capped at
   2,000 entries per overlay — when a run yields more, the survivors are the
-  quickest to answer (lowest handshake latency).
+  lowest elapsed probe duration (including proxy setup and the bounded fee-filter wait).
 
 The per-node JSON lines stay a 14-day workflow artifact; this file is the
 carve-out, a product for the wallet rather than a census view.

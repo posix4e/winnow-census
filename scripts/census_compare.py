@@ -197,8 +197,8 @@ def capture(args):
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
     if (out/'manifest.json').exists(): raise ValueError('Choose a new evidence directory; snapshots are immutable')
     specs = dict(SOURCES)
-    if args.winnow_summary: specs['winnow'] = ('https://census.winnowwallet.com/census/'+Path(args.winnow_summary).name, 'Winnow observation, with BTCNodes input endpoints.')
-    if args.winnow_records: specs['winnow_records'] = ('https://github.com/winnowwallet/census/actions/workflows/peer-census.yml', 'Raw observations from the same Winnow full run.')
+    if args.winnow_summary: specs['winnow'] = (args.winnow_run_url or 'https://census.winnowwallet.com/census/'+Path(args.winnow_summary).name, 'Winnow observation, with BTCNodes input endpoints.')
+    if args.winnow_records: specs['winnow_records'] = (args.winnow_run_url or 'https://github.com/winnowwallet/census/actions/workflows/peer-census.yml', 'Raw observations from the same Winnow full run.')
     manifest = {'schemaVersion': 1, 'capturedAt': now(), 'processingRevision': revision(), 'toolSHA256': sha(Path(__file__).read_bytes()), 'sources': {}}
     for name, (url, independence) in specs.items():
         entry = dict(url=url, independence=independence, retrievedAt=now())
@@ -206,6 +206,7 @@ def capture(args):
             local = {'btcnodes': args.btcnodes, 'winnow': args.winnow_summary, 'winnow_records': args.winnow_records}.get(name)
             if local:
                 raw = Path(local).read_bytes(); entry['retrievalKind'] = 'local preserved run artifact; original retrieval time not asserted'
+                if args.winnow_run_url: entry['preservedRunURL'] = args.winnow_run_url
             else:
                 request = urllib.request.Request(url, headers={'User-Agent': 'Winnow census comparison (+https://github.com/winnowwallet/census)'})
                 with urllib.request.urlopen(request, timeout=60) as response:
@@ -295,6 +296,7 @@ if __name__ == '__main__':
     commands = parser.add_subparsers(dest='command', required=True)
     cap = commands.add_parser('capture'); cap.add_argument('--out', required=True)
     cap.add_argument('--btcnodes'); cap.add_argument('--winnow-summary'); cap.add_argument('--winnow-records')
+    cap.add_argument('--winnow-run-url', help='Public workflow run retaining these original input and output artifacts')
     replay = commands.add_parser('compare'); replay.add_argument('directory')
     args = parser.parse_args()
     if args.command == 'capture': capture(args)
