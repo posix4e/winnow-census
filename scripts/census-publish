@@ -43,7 +43,9 @@ if args.summary:
 
 index = []
 for name in sorted(os.listdir(CENSUS)):
-    if not name.endswith(".json") or name == "index.json":
+    # index.json is the index itself; peers.json is the wallet's peer list,
+    # a different schema the wallet repo consumes, not a day's aggregate.
+    if not name.endswith(".json") or name in ("index.json", "peers.json"):
         continue
     day = json.load(open(os.path.join(CENSUS, name)))
     families = day.get("families", {})

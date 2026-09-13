@@ -15,7 +15,9 @@ name: Peer census
 # what that looks like (Tor took longer than three minutes to bootstrap, its
 # SOCKS port was already listening, and half the usable peers vanished). The
 # per-node JSON lines are kept as a 14-day artifact rather than committed:
-# btcnodes already publishes the per-IP view.
+# btcnodes already publishes the per-IP view. The one exception is
+# census/peers.json, the wallet's verified fallback-peer list, derived from
+# the run and committed with the aggregate.
 
 on:
   schedule:
@@ -142,6 +144,15 @@ jobs:
           cp "$RUNNER_TEMP/i2pd.log" i2pd.log 2>/dev/null || true
           echo "tor warnings and errors:"
           grep -hE '\[(warn|err)\]' tor.log 2>/dev/null | sed -E 's/^[A-Za-z]{3} [0-9]{2} [0-9:.]+ //' | sort | uniq -c | sort -rn | head -n 20 || true
+
+      - name: Build the verified peer list
+        # census/peers.json is the wallet's fallback-peer product: the usable,
+        # at-tip endpoints of the run just dialled, filtered to the wallet's
+        # PeerPolicyTests invariants. It is permanent, committed alongside the
+        # aggregate; the raw JSON lines stay a 14-day artifact.
+        run: |
+          TIP=$(python3 -c 'import json; print(json.load(open("snapshot.json")).get("latest_height", 0))')
+          .build/release/WinnowCensus --peer-list census.jsonl --tip "$TIP" --out census/peers.json
 
       - name: Publish the aggregate
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
