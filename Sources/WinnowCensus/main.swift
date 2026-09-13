@@ -371,7 +371,7 @@ private func summarize(_ records: [Record], tip: Int32, splitHeight: Int32 = 961
     let ahead = ok.filter { Int64($0.startHeight ?? 0) - Int64(tip) > 100 }
     print("  at the BIP-110 split height (\(splitHeight)…\(splitHeight + 20)): \(stuck.count)  \(pct(stuck.count, ok.count))")
     print("  more than 100 blocks behind the tip:                \(behind.count)  \(pct(behind.count, ok.count))")
-    print("  more than 100 blocks above the tip (another chain):  \(ahead.count)  \(pct(ahead.count, ok.count))")
+    print("  more than 100 blocks above the reference tip:        \(ahead.count)  \(pct(ahead.count, ok.count))")
     let filters = ok.compactMap(\.feeFilterSatPerKvB).sorted()
     if !filters.isEmpty {
         print("  fee filter median \(filters[filters.count / 2]) sat/kvB, "
