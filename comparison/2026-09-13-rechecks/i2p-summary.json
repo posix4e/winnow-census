@@ -1,0 +1,45 @@
+{
+  "aheadOfTip" : 0,
+  "behind" : 0,
+  "completeRun" : false,
+  "dialled" : 2,
+  "expectedRecords" : 2,
+  "families" : {
+    "Core" : {
+      "atTip" : 2,
+      "behind" : 0,
+      "medianFeeFilterSatPerKvB" : 100,
+      "stuckAtSplit" : 0,
+      "usable" : 2
+    }
+  },
+  "generatedAt" : "2026-09-13T16:37:25Z",
+  "handshakeLatencyMsMedian" : 9161,
+  "inputSHA256" : "a8912869fd01fd27141127f40fb9cdbf67c0a416f06d16721c8b843fbcb45fd8",
+  "medianFeeFilterSatPerKvB" : 100,
+  "networks" : {
+    "i2p" : {
+      "atTip" : 2,
+      "behind" : 0,
+      "dialled" : 2,
+      "noCompactFilters" : 0,
+      "stuckAtSplit" : 0,
+      "usable" : 2
+    }
+  },
+  "observationEndedAt" : "2026-09-13T16:37:34Z",
+  "observedTip" : 966830,
+  "outcomes" : {
+    "ok" : 2
+  },
+  "peerListSHA256" : "3fbe5cd492ecf9b3f8e17e42b778ef05a3437293eb7ac99902d6aa3ae9c45b3a",
+  "processedAt" : "2026-09-13T16:37:34Z",
+  "recordsSHA256" : "97e912e63a7f3f2796f74051bca6ad84aaf05a5751087e796c52ce2ae12b18fa",
+  "sample" : 2,
+  "splitHeight" : 961632,
+  "stuckAtSplit" : 0,
+  "usable" : 2,
+  "wholeNetworkFamilies" : {
+    "Core" : 2
+  }
+}

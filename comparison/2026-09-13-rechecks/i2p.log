@@ -1,0 +1,23 @@
+dialling 2 endpoints
+i2p: 2 endpoints, 2 at a time
+i2p 2/2
+
+dialled 2
+  ok                 2  100.0%
+
+of the 2 Winnow-usable peers (handshake ok, compact filters advertised):
+  tip used to judge heights: 966830
+  at the BIP-110 split height (961632…961652): 0  0.0%
+  more than 100 blocks behind the tip:                0  0.0%
+  more than 100 blocks above the reference tip:        0  0.0%
+  fee filter median 100 sat/kvB, over 100 sat/vB: 0
+
+by overlay network:
+  network   dialled  usable   no filters  stuck@split (of usable)
+  i2p       2        100.0%   0.0%        0.0%
+
+by software family (usable peers):
+  family   count  at tip   stuck@split  >100 behind
+  Core     2      100.0%   0.0%         0.0%
+
+top user agents among stuck peers:

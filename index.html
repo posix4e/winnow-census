@@ -6,58 +6,100 @@
 <title>Winnow peer census</title>
 <meta name="description" content="Daily Bitcoin endpoint measurements: handshake outcomes, advertised compact-filter support, reported heights, overlay coverage and reproducible artifacts.">
 <style>
-  :root { color-scheme: light dark; --paper: #fbfaf6; --ink: #14130e; --ink-2: #585549; --rule: #e5e1d6; --mono: ui-monospace, SFMono-Regular, Menlo, monospace; }
-  @media (prefers-color-scheme: dark) { :root { --paper: #14130e; --ink: #f3efe6; --ink-2: #a9a496; --rule: #272319; } }
-  body { margin: 0; background: var(--paper); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif; line-height: 1.5; }
-  a { color: inherit; }
-  .census { max-width: 60rem; margin: 0 auto; padding: 2rem 1rem 4rem; }
-  .census h1 { font-size: 2rem; margin: 0 0 .25rem; }
-  .census .sub { color: var(--ink-2, #555); margin: 0 0 2rem; }
-  .census .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .75rem; margin: 0 0 2rem; }
-  .census .tile { border: 1px solid var(--rule, #ddd); border-radius: .5rem; padding: .9rem 1rem; }
-  .census .tile .n { font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .census .tile .l { color: var(--ink-2, #555); font-size: .85rem; }
-  .census table { border-collapse: collapse; width: 100%; margin: 0 0 2rem; font-variant-numeric: tabular-nums; }
-  .census th, .census td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid var(--rule, #ddd); }
-  .census th { font-weight: 600; color: var(--ink-2, #555); font-size: .85rem; }
-  .census td.num, .census th.num { text-align: right; }
-  .census .wrap { overflow-x: auto; }
-  .census svg { width: 100%; height: auto; display: block; margin: 0 0 2rem; }
-  .census .note { color: var(--ink-2, #555); font-size: .9rem; }
-  .census code { font-family: var(--mono, ui-monospace, monospace); font-size: .9em; }
+  :root { color-scheme: dark; --paper:#0d1012; --ink:#e9e7df; --ink-2:#a9b0b1; --rule:#303638; --accent:#efa85e; --blue:#9fbdce; --red:#d88c77; --mono:ui-monospace,SFMono-Regular,Consolas,monospace; }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body { margin:0; background:var(--paper); color:var(--ink); font:1rem/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+  body::before { content:""; position:fixed; inset:0; pointer-events:none; z-index:-1; background-image:linear-gradient(#b5bec306 1px,transparent 1px),linear-gradient(90deg,#b5bec306 1px,transparent 1px); background-size:32px 32px; }
+  a { color:var(--accent); text-decoration-thickness:1px; text-underline-offset:.22em; }
+  a:hover { color:#fff1d6; }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:5px; }
+  .census { max-width:76rem; margin:auto; padding:1.4rem clamp(1rem,4vw,3rem) 4rem; }
+  .masthead { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.6rem 0 1.2rem; border-bottom:1px solid var(--rule); font: .875rem var(--mono); }
+  .masthead .brand { color:var(--ink); text-decoration:none; letter-spacing:.12em; }
+  .brand b { color:var(--accent); }
+  nav { display:flex; gap:1.4rem; flex-wrap:wrap; }
+  .intro { display:grid; grid-template-columns:1fr auto; gap:2rem; align-items:center; padding:2rem 0 1rem; }
+  h1 { font:600 clamp(2rem,4.4vw,3.5rem)/1.08 var(--mono); letter-spacing:-.065em; margin:0 0 1rem; max-width:16ch; }
+  .sub { color:var(--ink-2); max-width:57ch; margin:0; }
+  .equation { margin:0; border-left:2px solid var(--accent); padding:.7rem 0 .7rem 1.3rem; color:var(--accent); }
+  .equation math { font-size:1.8rem; display:block; margin-bottom:.6rem; }
+  .equation figcaption { max-width:20ch; font:.8rem/1.5 var(--mono); color:var(--ink-2); }
+  #freshness { font:.875rem/1.6 var(--mono); color:var(--ink-2); margin:1rem 0; padding:.7rem 0; border-block:1px solid var(--rule); }
+  .tiles { display:grid; grid-template-columns:repeat(3,1fr); margin:0 0 2.5rem; border-bottom:1px solid var(--rule); }
+  .tile { padding:1.2rem 1rem 1.2rem 0; min-width:0; }
+  .tile:nth-child(3n+2),.tile:nth-child(3n+3) { border-left:1px solid var(--rule); padding-left:1.2rem; }
+  .tile:nth-child(n+4) { border-top:1px solid var(--rule); }
+  .tile .n { color:var(--accent); font:500 clamp(1.7rem,3vw,2.7rem)/1.2 var(--mono); font-variant-numeric:tabular-nums; margin-bottom:.45rem; }
+  .tile .l { color:var(--ink-2); font-size:.875rem; max-width:28ch; }
+  h2 { font:500 1.25rem/1.4 var(--mono); letter-spacing:-.03em; margin:2.6rem 0 1rem; }
+  h2 .index { color:var(--accent); font-size:.8rem; margin-right:.8rem; letter-spacing:0; }
+  h3 { font:500 1rem/1.5 var(--mono); }
+  table { border-collapse:collapse; width:100%; margin:0; font: .875rem/1.5 var(--mono); font-variant-numeric:tabular-nums; }
+  th,td { text-align:left; padding:.75rem .65rem; border-bottom:1px solid var(--rule); vertical-align:top; }
+  th { color:var(--ink-2); font-weight:400; }
+  tbody tr:hover { background:#efa85e08; }
+  td.num,th.num { text-align:right; }
+  .wrap { overflow-x:auto; margin-bottom:1.5rem; }
+  .plot { overflow-x:auto; border:1px solid var(--rule); padding:1rem .6rem 0; background:#0d1012bf; }
+  svg { width:100%; min-width:620px; height:auto; display:block; }
+  .note { color:var(--ink-2); font-size:.875rem; }
+  .legend { display:flex; flex-wrap:wrap; gap:.5rem 1.5rem; font:.8rem/1.6 var(--mono); }
+  .legend span::before { content:""; display:inline-block; width:1.2rem; height:2px; margin:0 .6rem .25rem 0; background:var(--blue); }
+  .legend span+span::before { background:var(--red); }
+  .reading { max-width:78ch; }
+  .reading p { margin:0 0 1rem; }
+  code,pre { font-family:var(--mono); font-size:.875em; }
+  pre { overflow:auto; padding:1.25rem; border:1px solid var(--rule); border-left:2px solid var(--accent); background:#080b0d; line-height:1.7; }
+  #artifacts { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(2,1fr); border-top:1px solid var(--rule); }
+  #artifacts li { border-bottom:1px solid var(--rule); padding:.9rem .8rem .9rem 0; font:.875rem/1.5 var(--mono); }
+  #provenance { overflow-wrap:anywhere; font-family:var(--mono); font-size:.75rem; }
+  .comparison { border-left:2px solid var(--accent); padding-left:1.3rem; }
+  footer { margin-top:3rem; padding-top:1rem; border-top:1px solid var(--rule); color:var(--ink-2); font:.8rem/1.6 var(--mono); }
+  @media(max-width:650px) { .intro { grid-template-columns:1fr; gap:1rem; } .equation { display:none; } h1 { max-width:none; } .masthead { align-items:flex-start; } nav { gap:.6rem 1rem; justify-content:flex-end; } .tiles { grid-template-columns:repeat(2,1fr); } .tile:nth-child(n) { padding:.9rem .75rem; border-left:0; border-top:1px solid var(--rule); } .tile:nth-child(2n) { border-left:1px solid var(--rule); } .tile:nth-child(-n+2) { border-top:0; } #artifacts { grid-template-columns:1fr; } }
+  @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+  @media print { :root { --paper:white; --ink:black; --ink-2:#333; --rule:#bbb; --accent:#8a4300; } body::before { display:none; } .plot,pre { background:white; } }
 </style>
 </head>
 <body>
 <main class="census">
-<h1>Bitcoin peer census</h1>
-<p class="sub">BTCNodes supplies the endpoints. Winnow makes a new connection to each supported endpoint and records its Bitcoin handshake, reported height and services.</p>
+<header class="masthead"><a class="brand" href="#"><b>₿</b> WINNOW / CENSUS</a><nav aria-label="Census"><a href="#measurements">Data</a><a href="#build">Run your own</a><a href="https://github.com/winnowwallet/census">Source</a></nav></header>
+<div class="intro"><div><h1>Bitcoin peer census</h1><p class="sub">I built this after a wallet sync got stuck. BTCNodes gives me a list of endpoints. I dial them with Winnow’s handshake and keep what comes back. Failures included.</p></div><figure class="equation"><math xmlns="http://www.w3.org/1998/Math/MathML" aria-label="Filter handshake share equals filter handshakes divided by attempts"><mi>q</mi><mo>=</mo><mfrac><msub><mi>N</mi><mi>CF</mi></msub><msub><mi>N</mi><mi>attempts</mi></msub></mfrac></math><figcaption>A service claim, a handshake, then a candidate. Different counts.</figcaption></figure></div>
 <p id="freshness" role="status">Loading observations…</p>
 <div class="tiles" id="tiles"></div>
-<h2>Daily observations</h2>
-<svg id="trend" viewBox="0 0 720 220" role="img" aria-label="Compact-filter handshake share over time; missing days are gaps"></svg>
-<p class="note">Blue: successful compact-filter handshakes / attempted endpoints. Red: reported split-height range / compact-filter handshakes. Missing dates and missing metrics remain gaps. Older runs used the previous height policy; see each artifact’s provenance.</p>
-<h2>Latest measurements</h2>
+<h2 id="measurements"><span class="index">01</span>Daily observations</h2>
+<div class="plot" tabindex="0" aria-label="Scrollable daily observation chart"><svg id="trend" viewBox="0 0 720 220" role="img" aria-label="Compact-filter handshake share over time; missing days are gaps"></svg></div>
+<div class="legend"><span>Filter handshakes / attempts</span><span>Split-height reports / filter handshakes</span></div><p class="note">A missing day stays missing. Older runs used the previous height policy; their artifacts keep that history.</p>
+<h2><span class="index">02</span>What answered</h2>
 <div class="wrap"><table id="outcomes"><thead><tr><th>Outcome</th><th>Endpoints</th><th>Share of attempts</th></tr></thead><tbody></tbody></table></div>
 <div class="wrap"><table id="networks"><thead><tr><th>Transport</th><th>Attempts</th><th>Compact-filter handshake</th><th>Answered without filters</th><th>Near tip, of filter handshakes</th></tr></thead><tbody></tbody></table></div>
-<h2>Software reported by responding endpoints</h2>
+<h2><span class="index">03</span>What they say they run</h2>
 <p class="note">User agents are self-reported. Whole-network counts include version responses without compact-filter support. Filter-handshake counts are a subset and must not be compared with another census’s whole-network percentages.</p>
 <div class="wrap"><table id="families"><thead><tr><th>Family</th><th>All version responses</th><th>Filter handshakes</th><th>Near tip, of filter handshakes</th><th>Median fee filter</th></tr></thead><tbody></tbody></table></div>
-<h2>Artifacts and provenance</h2>
+<h2 id="artifacts-heading"><span class="index">04</span>Take the data</h2>
 <ul id="artifacts"></ul>
 <p id="provenance" class="note"></p>
-<h2>What this can establish</h2>
+<section class="reading comparison" aria-labelledby="comparison-heading"><h2 id="comparison-heading"><span class="index">05</span>Do the other censuses agree?</h2><p>On September 13, I compared the same 23,061 responding endpoints with the BTCNodes input: 7,524 compact-filter advertisements here, 7,526 there. A difference of two. BTCNodes supplied the list, so that is a consistency check with our input source.</p><p>Bitnod.es keeps unresponsive endpoints for eight days. Coin Dance deduplicates by address. The latest 21 Ninja CSV I could retrieve was from November 2025. Putting those totals beside each other does not make them the same measurement.</p><p><a href="https://github.com/winnowwallet/census/tree/main/comparison/2026-09-13-full">Dated comparison, source snapshots and calculations</a> · <a href="https://github.com/winnowwallet/census/tree/main/comparison/2026-09-13-rechecks">The two discrepancies, rechecked</a></p></section>
+<section class="reading" id="build"><h2><span class="index">06</span>Build your own census</h2><p>The useful part is being able to rerun it. The crawler is a small Swift command-line program using the wallet’s connection code. It records version messages, service bits, reported heights and fee filters. It does not ask a server about your wallet.</p><p>On macOS with Swift 6, this starts a small clearnet diagnostic sample. Tor and I2P need their own ready SOCKS routers; the <a href="https://github.com/winnowwallet/census/blob/main/.github/workflows/peer-census.yml">full-run workflow</a> has the exact setup, concurrency and timeout settings.</p><pre><code>git clone https://github.com/winnowwallet/census.git
+cd census
+swift build -c release --product WinnowCensus
+curl -fsSL https://btcnodes.io/api/v1/snapshots/latest/ -o snapshot.json
+.build/release/WinnowCensus --input snapshot.json --sample 32 \
+  --out diagnostic.jsonl --summary-json diagnostic-summary.json</code></pre><p>A sample is for debugging. It cannot publish over a full run. To repeat the cross-census calculation without fetching new data:</p><pre><code>python3 scripts/census_compare.py compare comparison/2026-09-13-full</code></pre><h3>Things that bit me</h3><p>A listening SOCKS port does not mean Tor is ready. A rerun today does not make last week’s observations fresh. A timeout is an observation from one connection attempt. And a fee-filter wait makes “handshake latency” a bad name for the elapsed time. The code and artifacts keep those distinctions because the wallet depends on them.</p><p>Keep the input snapshot and raw records when you change the observer. That is how someone else can tell whether a different result came from the network, your timeout, or your code.</p></section>
+<section class="reading"><h2><span class="index">07</span>What the numbers mean</h2>
 <p>A successful handshake with <code>NODE_COMPACT_FILTERS</code> advertises support; it does not prove that the endpoint returns valid filters. The wallet checks selected peers and filter responses during normal operation. Near-tip candidates report a nonnegative height within 100 blocks, in either direction, of the reference tip supplied by the input snapshot. Reported height alone cannot identify a chain or establish dishonesty.</p>
 <p>These are endpoints, not a count of distinct machines or people. One node can have several addresses, ports and transports. Multiple nodes can also share a public address. The clearnet category combines IPv4 and IPv6; Tor and I2P are measured separately. CJDNS and invalid or private addresses are excluded. Timeouts describe this observer’s connection attempt, not permanent unreachability.</p>
 <p>The downloadable catalog canonicalizes and deduplicates endpoints, applies public-address and network-prefix diversity rules to clearnet, validates overlay addresses, and retains at most 2,000 candidates per overlay. The wallet supports direct clearnet and opt-in Tor; I2P transport is deferred. A diagnostic sample or unhealthy overlay run cannot replace production data. Refresh failures leave the previous good artifacts available, with their original observation date.</p>
 <p>Probe duration is elapsed time for successful filter handshakes, including proxy connection setup where used and the bounded wait for a fee-filter announcement. It is not a round-trip latency measurement. Fee filters are the peer’s announced relay threshold, not a fee recommendation or a transaction-confirmation estimate. The split-height count records heights 961,632–961,652; it does not independently prove which chain a peer follows.</p>
 <p>See the <a href="https://github.com/winnowwallet/census">census source and reproducible comparisons</a>, <a href="https://github.com/winnowwallet/census/actions/workflows/peer-census.yml">full run logs and retained raw observations</a>, and <a href="https://winnowwallet.com">Winnow wallet</a>. BTCNodes is our input source, so agreement with its endpoint list is not independent confirmation.</p>
+</section><footer>Measured with Winnow. Source and data in <a href="https://github.com/winnowwallet/census">winnowwallet/census</a>. No account required.</footer>
 </main>
 <script>
 (async () => {
   const number = n => Number.isFinite(n) ? n.toLocaleString('en-US') : 'Unavailable';
   const share = (n, d) => Number.isFinite(n) && d > 0 ? (100 * n / d).toFixed(1) + '%' : 'Unavailable';
   const element = (tag, text) => { const e = document.createElement(tag); e.textContent = text; return e; };
-  const row = (id, values) => { const r = document.createElement('tr'); values.forEach(v => r.append(element('td', v))); document.querySelector('#' + id + ' tbody').append(r); };
+  const row = (id, values) => { const r = document.createElement('tr'); values.forEach((v,i) => {const cell=element('td',v); if(i)cell.className='num';r.append(cell);}); document.querySelector('#' + id + ' tbody').append(r); };
   const get = async path => { const r = await fetch(path, {cache: 'no-store'}); if (!r.ok) throw Error('Artifact unavailable'); return r.json(); };
   try {
     const index = await get('census/index.json');
@@ -68,7 +110,7 @@
     document.getElementById('freshness').textContent = 'Observation: ' + latest.generatedAt + (latest.observationEndedAt ? ' to ' + latest.observationEndedAt : ' (end time unavailable)') + '. ' + age + ' days old.' + (age > 7 ? ' Catalog too old for a wallet refresh.' : '') + (latest.completeRun !== true ? ' Historical artifact: full-run provenance was not recorded by this version.' : ' Accepted full run.');
     const near = Object.values(latest.networks || {}).reduce((sum,n) => Number.isFinite(n.atTip) && Number.isFinite(sum) ? sum+n.atTip : NaN, 0);
     const tiles = [[latest.dialled,'attempted endpoints'],[latest.usable,'successful filter handshakes'],[near,'near-tip filter handshakes before catalog limits'],[latest.observedTip,'reference height'],[latest.handshakeLatencyMsMedian,'median probe milliseconds'],[latest.medianFeeFilterSatPerKvB == null ? null : latest.medianFeeFilterSatPerKvB / 1000,'median announced fee filter (sat/vB)']];
-    for (const [n,label] of tiles) { const tile=element('div',''); tile.className='tile'; const count=element('div',number(n)); count.className='n'; tile.append(count,element('div',label)); document.getElementById('tiles').append(tile); }
+    for (const [n,label] of tiles) { const tile=element('div',''); tile.className='tile'; const count=element('div',number(n)); count.className='n'; const caption=element('div',label); caption.className='l'; tile.append(count,caption); document.getElementById('tiles').append(tile); }
     for (const [name,n] of Object.entries(latest.outcomes || {}).sort()) row('outcomes',[name,number(n),share(n,latest.dialled)]);
     for (const [name,n] of Object.entries(latest.networks || {}).sort()) row('networks',[name,number(n.dialled),number(n.usable)+' ('+share(n.usable,n.dialled)+')',number(n.noCompactFilters),share(n.atTip,n.usable)]);
     const families = [...new Set([...Object.keys(latest.families || {}),...Object.keys(latest.wholeNetworkFamilies || {})])].sort();
@@ -79,10 +121,10 @@
     const add=(tag,attrs,text)=>{const e=document.createElementNS(ns,tag);for(const [k,v]of Object.entries(attrs))e.setAttribute(k,v);if(text)e.textContent=text;svg.append(e);};
     const start=Date.parse(days[0].date), end=Date.parse(last.date), span=end-start || 86400000;
     const x=d=>48+(Date.parse(d.date)-start)/span*655, y=v=>184-v*1.55;
-    for(let n=0;n<=100;n+=25){add('line',{x1:48,x2:703,y1:y(n),y2:y(n),stroke:'var(--rule)'});add('text',{x:42,y:y(n)+4,'text-anchor':'end',fill:'currentColor','font-size':11},n+'%');}
-    const series=[{color:'#3b6ea5',value:d=>d.dialled>0 && Number.isFinite(d.usable)?100*d.usable/d.dialled:null},{color:'#c0392b',value:d=>d.usable>0 && Number.isFinite(d.stuckAtSplit)?100*d.stuckAtSplit/d.usable:null}];
+    for(let n=0;n<=100;n+=25){add('line',{x1:48,x2:703,y1:y(n),y2:y(n),stroke:'var(--rule)'});add('text',{x:42,y:y(n)+4,'text-anchor':'end',fill:'currentColor','font-size':13},n+'%');}
+    const series=[{color:'var(--blue)',value:d=>d.dialled>0 && Number.isFinite(d.usable)?100*d.usable/d.dialled:null},{color:'var(--red)',value:d=>d.usable>0 && Number.isFinite(d.stuckAtSplit)?100*d.stuckAtSplit/d.usable:null}];
     for(const s of series){let previous=null;for(const d of days){const v=s.value(d);if(v==null){previous=null;continue;}if(previous && Date.parse(d.date)-Date.parse(previous.date)===86400000)add('line',{x1:x(previous),y1:y(s.value(previous)),x2:x(d),y2:y(v),stroke:s.color,'stroke-width':2});add('circle',{cx:x(d),cy:y(v),r:3,fill:s.color});previous=d;}}
-    days.forEach((d,i)=>{if(i%Math.max(1,Math.ceil(days.length/7))===0 || i===days.length-1)add('text',{x:x(d),y:210,fill:'currentColor','font-size':11,'text-anchor':'middle'},d.date.slice(5));});
+    days.forEach((d,i)=>{if(i%Math.max(1,Math.ceil(days.length/7))===0 || i===days.length-1)add('text',{x:x(d),y:210,fill:'currentColor','font-size':13,'text-anchor':'middle'},d.date.slice(5));});
   } catch(error) { document.getElementById('freshness').textContent='Census data could not be loaded: '+error.message; }
 })();
 </script>
