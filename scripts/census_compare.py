@@ -38,7 +38,15 @@ def revision():
     return subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=Path(__file__).resolve().parents[1], text=True).strip()
 def timestamp(value):
     if not value: return None
-    return dt.datetime.fromisoformat(value.replace('Z', '+00:00')).replace(tzinfo=UTC)
+    try:
+        parsed = dt.datetime.fromisoformat(value.replace('Z', '+00:00'))
+        return parsed.astimezone(UTC) if parsed.tzinfo is not None else None
+    except (ValueError, TypeError, AttributeError): return None
+
+def window(source):
+    start = timestamp(source.get('observationStart'))
+    end = timestamp(source.get('observationEnd'))
+    return (start, end) if start and end and end >= start else None
 def integer(value):
     try: return int(value.replace(',', '')) if isinstance(value, str) else int(value)
     except (ValueError, TypeError): return None
@@ -212,9 +220,12 @@ def capture(args):
     compare(out)
 
 def comparison(winnow, source, max_hours=6):
-    a, b = timestamp(winnow.get('observationStart')), timestamp(source.get('observationStart'))
-    delta = abs((a-b).total_seconds()) if a and b else None
+    a, b = window(winnow), window(source)
+    # Both boundaries must be close: a multi-day scan is not matched merely
+    # because its start happens to equal an instantaneous snapshot timestamp.
+    delta = max(abs((a[i]-b[i]).total_seconds()) for i in (0, 1)) if a and b else None
     result = {'source': source['source'], 'timestampDifferenceSeconds': delta,
+              'timestampDifferenceDefinition': 'Maximum absolute difference between corresponding observation-window boundaries',
               'status': 'inconclusive', 'countDifference': None, 'percentagePointDifference': None,
               'reason': 'Definitions, denominators or observation windows are not matched.'}
     if delta is None: result['reason'] = 'Exact observation window unavailable; no comparable percentage calculated.'

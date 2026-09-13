@@ -10,7 +10,7 @@ spec.loader.exec_module(module)
 
 class ComparisonTests(unittest.TestCase):
     def source(self, name, date='2026-09-13T10:00:00Z'):
-        return dict(source=name, observationStart=date, endpoints=['8.8.8.8:8333', '9.9.9.9:8333'],
+        return dict(source=name, observationStart=date, observationEnd=date, endpoints=['8.8.8.8:8333', '9.9.9.9:8333'],
                     versionEndpoints=['8.8.8.8:8333', '9.9.9.9:8333'], compactFilterEndpoints=['8.8.8.8:8333'])
 
     def test_canonical_endpoint_and_overlay(self):
@@ -41,6 +41,15 @@ class ComparisonTests(unittest.TestCase):
         a,b=self.source('winnow'),self.source('btcnodes')
         b['versionEndpoints']=['1.1.1.1:8333']
         self.assertIsNone(module.comparison(a,b)['percentagePointDifference'])
+
+    def test_offset_normalization_and_complete_window_boundaries(self):
+        a, b = self.source('winnow'), self.source('btcnodes', '2026-09-13T06:00:00-04:00')
+        self.assertEqual(module.comparison(a, b)['timestampDifferenceSeconds'], 0)
+        b['observationEnd'] = '2026-09-15T10:00:00Z'
+        self.assertIsNone(module.comparison(a, b)['percentagePointDifference'])
+        for end in [None, 'malformed', '2026-09-13T09:00:00Z', '2026-09-13T10:00:00']:
+            a['observationEnd'] = end
+            self.assertIsNone(module.comparison(a, b)['timestampDifferenceSeconds'])
 
     def test_fixture_normalization_and_unknown_markup(self):
         evidence=dict(url='fixture',sha256='a'*64,retrievedAt='2026-09-13T12:00:00Z',independence='shared input')
