@@ -12,7 +12,7 @@ let package = Package(
         .executable(name: "WinnowCensus", targets: ["WinnowCensus"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/winnowwallet/winnow", revision: "97d2936c7e2baac0262e85c5928f6189b5e874c5"),
+        .package(url: "https://github.com/winnowwallet/winnow", revision: "c676da11113937bff910a1e0856d4e924226d388"),
     ],
     targets: [
         .executableTarget(
