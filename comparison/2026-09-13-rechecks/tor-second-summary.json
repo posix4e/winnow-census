@@ -1,0 +1,38 @@
+{
+  "aheadOfTip" : 0,
+  "behind" : 0,
+  "completeRun" : false,
+  "dialled" : 2,
+  "expectedRecords" : 2,
+  "families" : {
+
+  },
+  "generatedAt" : "2026-09-13T16:37:24Z",
+  "inputSHA256" : "b5d7e6e151395569016e095a71e9af9cccf1d54a4b1415a9a6d708699929b4fc",
+  "networks" : {
+    "tor" : {
+      "atTip" : 0,
+      "behind" : 0,
+      "dialled" : 2,
+      "noCompactFilters" : 1,
+      "stuckAtSplit" : 0,
+      "usable" : 0
+    }
+  },
+  "observationEndedAt" : "2026-09-13T16:37:39Z",
+  "observedTip" : 966830,
+  "outcomes" : {
+    "noCompactFilters" : 1,
+    "unreachable" : 1
+  },
+  "peerListSHA256" : "2967d0d200c3066e784873b8120047fbbe5ca6c7bfd17f3fb6d26e1d86900c4c",
+  "processedAt" : "2026-09-13T16:37:39Z",
+  "recordsSHA256" : "86d0b903129af1f0acc87ae586588cf25692b1d5a4a75af98bf88680fc08a820",
+  "sample" : 2,
+  "splitHeight" : 961632,
+  "stuckAtSplit" : 0,
+  "usable" : 0,
+  "wholeNetworkFamilies" : {
+    "Core" : 1
+  }
+}

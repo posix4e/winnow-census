@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-09-13T16:38:36.858296+00:00",
+  "processingRevision": "7adb2a5a50cb73422a7a48d752e7fe985ad65b3a",
+  "originalRunURL": "https://github.com/winnowwallet/census/actions/runs/34764970124",
+  "files": {
+    "tor.txt": "7c30ceeadf4bae102342a34121c9390df106486f072c8b3877e0d0b54ef5a669",
+    "tor.jsonl": "0156d730ef5106ada543042d0dcd7a97dfbd3f90aa2591c2aca0c9ce0211a84d",
+    "tor-summary.json": "8da45b7cde565839b4c6fd0e10bbeb0b1814f209af222b454d48535208a6d70d",
+    "tor.log": "70cdd2210eb0e6ce865df8965e31429d9ee220b190bb1a40f0de451e232b40fd",
+    "tor-second.txt": "b5d7e6e151395569016e095a71e9af9cccf1d54a4b1415a9a6d708699929b4fc",
+    "tor-second.jsonl": "86d0b903129af1f0acc87ae586588cf25692b1d5a4a75af98bf88680fc08a820",
+    "tor-second-summary.json": "2bdb8313cc54ba0acd134815a2afff8c12cf8f41ed2b97338c8422d305b2b99b",
+    "tor-second.log": "482491a61f14e0988e2ad5eb7d8b1d29215d5b61a85534050a0482fb1b4041d9",
+    "i2p.txt": "a8912869fd01fd27141127f40fb9cdbf67c0a416f06d16721c8b843fbcb45fd8",
+    "i2p.jsonl": "97e912e63a7f3f2796f74051bca6ad84aaf05a5751087e796c52ce2ae12b18fa",
+    "i2p-summary.json": "a31e999b23aed0110b5c799495dadd3a62557c2c286af43d20d62426d8224441",
+    "i2p.log": "472ec38f8634966e3b2bf80ec2d386215c8c7b16527d26dc4bb7d4498c0447dc"
+  },
+  "publication": "Diagnostic only; cannot replace full-run artifacts",
+  "measurement": "WinnowCensus with sample=2, tip=966830, per-overlay parallel=2, hidden-timeout=30 seconds; 3 two-endpoint batches, each includes one discrepancy and one prior successful endpoint. Tor uses local Arti, I2P uses app-independent i2pd."
+}
