@@ -7,7 +7,7 @@ import sys
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from census_health import calculate
+from census_health import calculate, mining
 
 
 def run(day=13, height=100, outcome='ok'):
@@ -68,3 +68,27 @@ class HealthTests(unittest.TestCase):
     def test_run_order_does_not_change_report(self):
         runs = [run(9), run(11), run(13)]
         self.assertEqual(calculate(runs, self.now), calculate(list(reversed(runs)), self.now))
+
+    def test_mining_units_and_missing_components(self):
+        source = dict(hashrates=[dict(timestamp=int(self.now.timestamp()), avgHashrate=2e18)],
+                      currentHashrate=3e18, currentDifficulty=100)
+        raw = json.dumps(source).encode()
+        meta = dict(schemaVersion=1, sha256=hashlib.sha256(raw).hexdigest(), retrievedAt='2026-09-13T17:00:00Z')
+        result = mining(raw, meta, self.now)
+        self.assertEqual(result['currentHashrateEHs'], 3)
+        self.assertEqual(result['hashrateSeries'][0]['hashrateEHs'], 2)
+        self.assertIsNone(result['poolConcentration'])
+        self.assertIsNone(result['blockInterval'])
+        meta['sha256'] = 'invalid'
+        with self.assertRaises(ValueError):
+            mining(raw, meta, self.now)
+
+    def test_mining_rejects_future_duplicate_and_nonfinite_data(self):
+        for points in [
+            [dict(timestamp=int(self.now.timestamp()) + 1, avgHashrate=1e18)],
+            [dict(timestamp=1, avgHashrate=1e18)] * 2,
+            [dict(timestamp=1, avgHashrate=float('nan'))]]:
+            raw = json.dumps(dict(hashrates=points, currentHashrate=1e18, currentDifficulty=100)).encode()
+            meta = dict(schemaVersion=1, sha256=hashlib.sha256(raw).hexdigest(), retrievedAt='2026-09-13T17:00:00Z')
+            with self.assertRaises(ValueError):
+                mining(raw, meta, self.now)

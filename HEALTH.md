@@ -75,12 +75,16 @@ observations and mining evidence before publishing a numerical composite.
 
 ```sh
 python3 scripts/census_health.py health-evidence/2026-09-13/manifest.json \
-  --as-of 2026-09-13T18:54:00Z --out health-report.json
+  --mining-manifest health-evidence/2026-09-13/mining-manifest.json \
+  --as-of 2026-09-13T18:59:20Z --out health-report.json
 ```
 
 The manifest points at immutable captured summary and raw records. Add selected
 accepted runs to a new manifest to calculate a 30-day series. An explicit
 evaluation timestamp makes replay deterministic. The first baseline covers
 26,691 endpoints and one accepted day, so every consistency score is null.
-The tool is an offline first step; daily collection, mining capture and the
-public component dashboard are still under development.
+A preserved Mempool snapshot supplies estimated hashrate and difficulty; pool
+attribution and block intervals remain unavailable. The manifest explicitly
+records that capture used JSON text from web retrieval, not HTTP wire bytes.
+The tool is an offline first step; daily collection and the public component
+dashboard are still under development.

@@ -11,6 +11,7 @@ import datetime as dt
 import gzip
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -38,6 +39,37 @@ def stamp(value):
 
 def ratio(n, d):
     return 100 * n / d if d else None
+
+
+def mining(raw, metadata, now):
+    if metadata.get('schemaVersion') != 1 or hashlib.sha256(raw).hexdigest() != metadata.get('sha256'):
+        raise ValueError('mining schema or hash mismatch')
+    if stamp(metadata['retrievedAt']) > now:
+        raise ValueError('mining snapshot retrieved after evaluation')
+    source = json.loads(raw)
+
+    def positive(value):
+        if type(value) not in (int, float) or not math.isfinite(value) or value <= 0:
+            raise ValueError('invalid mining measurement')
+        return value
+
+    points, seen = [], set()
+    for row in source['hashrates']:
+        t = row['timestamp']
+        if type(t) is not int or not 0 < t <= now.timestamp() or t in seen:
+            raise ValueError('invalid or duplicate mining timestamp')
+        seen.add(t)
+        points.append({'timestamp': t, 'hashrateEHs': positive(row['avgHashrate']) / 1e18})
+    if not 0 < len(points) <= 400:
+        raise ValueError('invalid mining series size')
+    points.sort(key=lambda x: x['timestamp'])
+    return {'status': 'partial', 'source': metadata,
+            'currentHashrateEHs': positive(source['currentHashrate']) / 1e18,
+            'currentDifficulty': positive(source['currentDifficulty']),
+            'hashrateSeries': points,
+            'latestPointAgeSeconds': now.timestamp() - points[-1]['timestamp'],
+            'poolConcentration': None, 'blockInterval': None,
+            'limitations': 'Hashrate is estimated. Current averaging window unavailable. Pool attribution and block intervals unavailable.'}
 
 
 def accepted(summary, raw, now):
@@ -131,6 +163,7 @@ def main():
     parser.add_argument('manifest', type=Path)
     parser.add_argument('--as-of', required=True, help='UTC timestamp, YYYY-MM-DDTHH:MM:SSZ')
     parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--mining-manifest', type=Path)
     args = parser.parse_args()
     now = stamp(args.as_of)
     if now > dt.datetime.now(UTC):
@@ -141,6 +174,9 @@ def main():
     base = args.manifest.resolve().parent
     runs = [(json.loads(read(base / r['summary'])), read(base / r['records'])) for r in manifest['runs']]
     report = calculate(runs, now)
+    if args.mining_manifest:
+        meta = json.loads(read(args.mining_manifest))
+        report['mining'] = mining(read(args.mining_manifest.parent / meta['file']), meta, now)
     report['manifestSHA256'] = hashlib.sha256(read(args.manifest)).hexdigest()
     report['processingRevision'] = subprocess.check_output(
         ['git', 'rev-parse', 'HEAD'], cwd=Path(__file__).resolve().parents[1], text=True).strip()
