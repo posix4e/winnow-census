@@ -127,6 +127,26 @@ def normalize(name, raw, evidence):
         result['limitations'] += ['Exact observation window unavailable. No endpoint export captured.', 'Displayed protocol coverage is IPv4, IPv6 and Tor; I2P measurement unavailable.', 'Software table includes grouped rows; no unverified summation of overlapping groups.']
     elif name == '21ninja_seeds':
         normalize_seed_export(raw, result)
+    elif name == 'bitnodes_export':
+        rows = list(csv.DictReader(io.StringIO(raw.decode())))
+        if not rows: raise ValueError('Empty Bitnod.es export')
+        nodes = {}
+        dates = collections.Counter()
+        for row in rows:
+            day = dt.date.fromisoformat(row['export_date']).isoformat()
+            key = endpoint(f"{row['ip_address']}:{row['port']}")
+            if key in nodes: raise ValueError('Duplicate endpoint in Bitnod.es export')
+            nodes[key] = row
+            dates[day] += 1
+        result.update(endpoints=sorted(nodes), overlays=population(nodes),
+                      software=dict(collections.Counter(family(r['user_agent']) for r in rows)),
+                      rowExportDates=dict(sorted(dates.items())))
+        result['stages'] = {'retainedExportEndpoints': len(nodes),
+                            'retainedAdvertisedCompactFilters': sum(bool(int(r['services']) & 64) for r in rows)}
+        result['definition'] = 'Public dated CSV containing retained address:port rows with mixed export_date values; not a simultaneous reachable population.'
+        result['limitations'] += ['Filename date is not an observation window. Row export_date semantics and retention require public documentation.',
+                                  'Do not apply a guessed recency cutoff or compare this retained population with the live dashboard denominator.',
+                                  'Service bits are retained advertisements, not tested filter responses. Same Bitnod.es project as the dashboard; not another independent source.']
     elif name.startswith('21ninja'):
         rows = list(csv.DictReader(io.StringIO(raw.decode())))
         row = max(rows, key=lambda r: r['time'])
@@ -197,6 +217,8 @@ def capture(args):
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
     if (out/'manifest.json').exists(): raise ValueError('Choose a new evidence directory; snapshots are immutable')
     specs = dict(SOURCES)
+    if args.bitnodes_export_url:
+        specs['bitnodes_export'] = (args.bitnodes_export_url, 'Same Bitnod.es project as the dashboard; observation independence from other projects unconfirmed.')
     if args.winnow_summary: specs['winnow'] = (args.winnow_run_url or 'https://census.winnowwallet.com/census/'+Path(args.winnow_summary).name, 'Winnow observation, with BTCNodes input endpoints.')
     if args.winnow_records: specs['winnow_records'] = (args.winnow_run_url or 'https://github.com/winnowwallet/census/actions/workflows/peer-census.yml', 'Raw observations from the same Winnow full run.')
     manifest = {'schemaVersion': 1, 'capturedAt': now(), 'processingRevision': revision(), 'toolSHA256': sha(Path(__file__).read_bytes()), 'sources': {}}
@@ -296,6 +318,7 @@ if __name__ == '__main__':
     commands = parser.add_subparsers(dest='command', required=True)
     cap = commands.add_parser('capture'); cap.add_argument('--out', required=True)
     cap.add_argument('--btcnodes'); cap.add_argument('--winnow-summary'); cap.add_argument('--winnow-records')
+    cap.add_argument('--bitnodes-export-url', help='Public dated Bitnod.es CSV; filename date is not treated as scan time')
     cap.add_argument('--winnow-run-url', help='Public workflow run retaining these original input and output artifacts')
     replay = commands.add_parser('compare'); replay.add_argument('directory')
     args = parser.parse_args()
