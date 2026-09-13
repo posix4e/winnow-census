@@ -93,4 +93,20 @@ class ComparisonTests(unittest.TestCase):
         self.assertNotIn('versionEndpoints',result)
         self.assertIsNone(module.comparison(self.source('winnow'),result)['percentagePointDifference'])
 
+    def test_bitnodes_retention_uses_calendar_days_not_scan_timestamp(self):
+        evidence=dict(url='https://www.bitnod.es/csv/bitcoin_nodes_2026-09-13.csv',sha256='a'*64,
+                      retrievedAt='2026-09-13T18:00:00Z',independence='same project')
+        raw=b'export_date,ip_address,port,services,user_agent\n2026-09-04,8.8.8.8,8333,64,/Satoshi:30/\n2026-09-05,9.9.9.9,8333,64,/Satoshi:30/\n2026-09-13,1.1.1.1,8333,0,/Satoshi:30/\n2026-09-14,1.0.0.1,8333,64,/Satoshi:30/\n'
+        result=module.normalize('bitnodes_export',raw,evidence)
+        self.assertEqual(result['stages']['activeByPublishedRetention'],2)
+        self.assertEqual(result['stages']['activeAdvertisedCompactFilters'],1)
+        self.assertEqual(result['retentionFilteredEndpoints'],['1.1.1.1:8333','9.9.9.9:8333'])
+        self.assertIsNone(result['observationStart'])
+        self.assertEqual(module.comparison(self.source('winnow'),result)['retentionFilteredEndpointOverlap']['intersection'],1)
+        delta=module.export_dashboard_comparison(result,{'stages':{'retainedReachable':3,'advertisedCompactFilters':2}})
+        self.assertEqual(delta['addressCountDifference'],-1)
+        self.assertEqual(delta['advertisedCompactFilterCountDifference'],-1)
+        self.assertIsNone(delta['percentagePointDifference'])
+        self.assertEqual(module.export_dashboard_comparison(result,{})['status'],'unavailable')
+
 if __name__=='__main__': unittest.main()

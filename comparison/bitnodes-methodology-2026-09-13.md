@@ -22,10 +22,17 @@ is an attributed paraphrase, not a publication of the email or its signature.
   The approximate export time was given tentatively as 02:00 UTC; we do not
   promote that estimate into an exact observation timestamp.
 
-The public September 13 CSV contains 54,187 retained addresses with mixed
-`export_date` values. The meaning of those row dates was asked in a follow-up
-and remains unresolved. The active-dashboard cutoff is therefore **not**
-applied to that column. See the [preserved export comparison](2026-09-13-bitnodes-export/README.md).
+In the same attributed follow-up, Jonathan clarified at 18:10 UTC that each
+CSV row's `export_date` is its last connection date. The September 13 export
+contains 54,187 retained addresses, with last-connection dates from May 23
+through September 13. Applying the active rule for the September 13 reference
+day keeps September 5–13 inclusive: 25,820 addresses, of which 6,283 advertise
+compact filters. The later dashboard capture had 26,170 addresses and 6,377
+advertisements, differences of −350 and −94 respectively. These are descriptive
+same-project snapshot differences, not matched-window validation. Exact scan
+windows and export time remain unavailable. The filename selects the reference
+day for this calculation; it does not become an observation timestamp.
+See the [preserved export comparison](2026-09-13-bitnodes-export/README.md).
 
 Older captured reports retain the independence information available at capture
 time. This dated clarification supersedes their unanswered methodology labels;

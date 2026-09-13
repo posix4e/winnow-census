@@ -149,9 +149,21 @@ def normalize(name, raw, evidence):
                       rowExportDates=dict(sorted(dates.items())))
         result['stages'] = {'retainedExportEndpoints': len(nodes),
                             'retainedAdvertisedCompactFilters': sum(bool(int(r['services']) & 64) for r in rows)}
-        result['definition'] = 'Public dated CSV containing retained address:port rows with mixed export_date values; not a simultaneous reachable population.'
-        result['limitations'] += ['Filename date is not an observation window. Row export_date semantics and retention require public documentation.',
-                                  'Do not apply a guessed recency cutoff or compare this retained population with the live dashboard denominator.',
+        result['lastConnectionDateRange'] = [min(dates), max(dates)]
+        match = re.search(r'/bitcoin_nodes_(\d{4}-\d{2}-\d{2})\.csv(?:$|\?)', evidence['url'])
+        if match:
+            reference = dt.date.fromisoformat(match[1])
+            retained = {key: row for key, row in nodes.items()
+                        if 0 <= (reference - dt.date.fromisoformat(row['export_date'])).days < 9}
+            result['retentionReferenceDate'] = reference.isoformat()
+            result['retentionRule'] = 'Keep last connections zero through eight UTC calendar days before the dated export label; exclude future dates.'
+            result['retentionFilteredEndpoints'] = sorted(retained)
+            result['retentionFilteredOverlays'] = population(retained)
+            result['stages']['activeByPublishedRetention'] = len(retained)
+            result['stages']['activeAdvertisedCompactFilters'] = sum(bool(int(r['services']) & 64) for r in retained.values())
+        result['definition'] = 'Public dated CSV with retained addresses and per-address last-connection dates in export_date; not a simultaneous reachable population.'
+        result['limitations'] += ['Filename date selects the retention reference day, not an observation window. Row dates are last connections, as clarified by the maintainer.',
+                                  'The retention-filtered export and later dashboard capture still have unmatched exact observation windows.',
                                   'Service bits are retained advertisements, not tested filter responses. Same Bitnod.es project as the dashboard; not another independent source.']
     elif name.startswith('21ninja'):
         rows = list(csv.DictReader(io.StringIO(raw.decode())))
@@ -266,6 +278,11 @@ def comparison(winnow, source, max_hours=6):
         aa, bb = set(left), set(right)
         result['endpointOverlap'] = {'definition': 'All Winnow attempted address:port endpoints versus source snapshot endpoints; not two independent reachable sets.',
                                      'intersection': len(aa & bb), 'winnowOnly': sorted(aa-bb), 'sourceOnly': sorted(bb-aa)}
+        if 'retentionFilteredEndpoints' in source:
+            retained = set(source['retentionFilteredEndpoints'])
+            result['retentionFilteredEndpointOverlap'] = {
+                'definition': 'Winnow attempted address:port endpoints versus export rows kept by the published UTC-calendar retention rule; unmatched scan windows.',
+                'intersection': len(aa & retained), 'winnowOnly': sorted(aa-retained), 'sourceOnly': sorted(retained-aa)}
     # This is a deliberately narrower population than a whole-network count:
     # exactly the endpoints that returned a version in both observations.
     required = ['versionEndpoints', 'compactFilterEndpoints']
@@ -280,6 +297,19 @@ def comparison(winnow, source, max_hours=6):
                           denominator=len(denominator), winnowCount=own, sourceCount=other,
                           reason='Both counts use the same endpoint denominator; differences remain subject to scan timing. Service advertisements do not prove filter responses.')
             if source['source'] == 'btcnodes': result['reason'] += ' Shared input source; not independent confirmation.'
+    return result
+
+def export_dashboard_comparison(export, dashboard):
+    left, right = export.get('stages', {}), dashboard.get('stages', {})
+    fields = [('addressCountDifference', 'activeByPublishedRetention', 'retainedReachable'),
+              ('advertisedCompactFilterCountDifference', 'activeAdvertisedCompactFilters', 'advertisedCompactFilters')]
+    result = {'status': 'descriptive unmatched-window comparison',
+              'definition': 'Bitnod.es dated export filtered by its published retention rule minus separately captured Bitnod.es dashboard; same observer, different capture times.',
+              'percentagePointDifference': None,
+              'reason': 'Exact scan windows and endpoint denominators are unmatched; this is not independent validation.'}
+    for output, a, b in fields:
+        result[output] = left[a] - right[b] if left.get(a) is not None and right.get(b) is not None else None
+    if all(result[key] is None for key, _, _ in fields): result['status'] = 'unavailable'
     return result
 
 def compare(out):
@@ -308,7 +338,9 @@ def compare(out):
     comparisons = [comparison(winnow, s) for name, s in normalized.items() if name not in ['winnow', '21ninja_services'] and 'stages' in s]
     report = {'schemaVersion': 1, 'manifestSHA256': sha((out/'manifest.json').read_bytes()), 'processingRevision': revision(),
               'toolSHA256': sha(Path(__file__).read_bytes()), 'sources': normalized, 'comparisons': comparisons,
-              'limitations': ['Count and percentage differences remain null where definitions or denominators are unmatched.', 'Missing sources do not block the production census pipeline.', 'Similar totals do not establish measurement correctness.']}
+              'limitations': ['Matched-population differences remain null where definitions or denominators are unmatched. Separately labeled same-project snapshot count differences do not imply matched scan windows.', 'Missing sources do not block the production census pipeline.', 'Similar totals do not establish measurement correctness.']}
+    if 'bitnodes_export' in normalized:
+        report['bitnodesExportVersusDashboard'] = export_dashboard_comparison(normalized['bitnodes_export'], normalized.get('bitnodes', {}))
     write(out/'report.json', report)
     lines = ['# Preserved cross-census observations', '', 'Evidence captured: '+manifest['capturedAt'], '', '| Source | Observation window | Definition | Results | Independence |', '|---|---|---|---|---|']
     for name, s in normalized.items():
