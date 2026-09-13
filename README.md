@@ -5,14 +5,13 @@ Engineering changes and daily data belong to the Winnow organization.
 The existing `winnow-census` Cloudflare Worker and census.winnowwallet.com
 domain are retained; the Worker name is a deployment identifier.
 
-Every reachable Bitcoin endpoint, dialled daily with the same handshake the
+Supported BTCNodes Bitcoin endpoints, dialled daily with the same handshake the
 [Winnow](https://github.com/winnowwallet/winnow) wallet uses, and published at
 **https://census.winnowwallet.com/**.
 
 A successful Winnow version handshake requires advertised `NODE_COMPACT_FILTERS`.
 It does not verify a compact-filter response or establish peer honesty. The
-numbers describe endpoints eligible for further wallet checks: how many advertise filters, how many of those are at the tip, how many are stuck on a dead chain, and
-how many claim a chain that is not Bitcoin's.
+numbers describe observed endpoints: handshake outcomes, advertised services, and reported heights. Heights and user agents are claims, not proof of a particular chain or implementation.
 
 ## What is here
 
@@ -44,8 +43,7 @@ how many claim a chain that is not Bitcoin's.
 
 ## The peer list (`census/peers.json`)
 
-The one per-node artifact kept permanently. Each run derives a wallet-grade
-verified peer list from the day's JSON lines, and the wallet repo consumes it
+The one per-node artifact kept permanently. Each run derives a validated candidate list from the day's JSON lines, and the wallet repo consumes it
 at release time to render its bundled fallback peers:
 
 ```sh
@@ -65,11 +63,10 @@ WinnowCensus --peer-list census.jsonl --tip HEIGHT --out census/peers.json
 }
 ```
 
-`date` is the run day (UTC), `tip` the height the run judged peers against.
-Entries are sorted by host, then port. Every entry completed Winnow's
+`date` is the original observation day (UTC), preserved during replay, `tip` the height the run judged peers against.
+Entries are selected by latency with deterministic host, port, user-agent and height tie-breakers. Every entry completed Winnow's
 handshake (so it advertises `NODE_COMPACT_FILTERS`) and sits within 100
-blocks of the tip in either direction — ahead of tip is another chain, not a
-faster peer. On top of that:
+blocks of the reference tip in either direction. A height outside that tolerance is excluded without assuming why it differs. On top of that:
 
 - **clearnet** satisfies the wallet's PeerPolicyTests invariants: public IP
   literals only (no hostnames), port 8333, at most one entry per IPv4 /16
@@ -137,3 +134,55 @@ push to main and after every daily census. Two repository secrets are needed:
   not overwrite one.
 
 Nothing else is configured by hand: no DNS record, no Pages project.
+
+## Publication contract and replay
+
+The census and wallet use `WalletCore.CensusCatalog` for address, schema, date,
+height and diversity validation. Tor v3 names include checksum/version validation;
+I2P b32 names are canonical 32-byte destinations. IPv4-mapped aliases and IPv6
+spellings are normalized before endpoint deduplication. The catalog is capped at
+2,000 entries per overlay; the clearnet catalog also requires port 8333 and one
+address per IPv4 /16 or IPv6 /32.
+
+`--summary-json` writes its aggregate and a sibling `peers.json` from the same
+records. Each record carries the original run start, completion timestamp,
+sample size, expected record count and source snapshot hash. The aggregate
+preserves that observation window separately from its processing timestamp and
+includes hashes linking the raw records and peer list. Replaying an old file
+without observation metadata requires its known original `--observed-at` UTC
+instant; this diagnostic replay does not acquire full-run provenance.
+
+Publication requires a complete unsampled run covering clearnet, Tor and I2P,
+with at least 50% version-handshake success on each overlay. The publisher checks
+the shared peer contract and all hashes before changing files. Failures preserve
+the previous published data. Historical replays cannot roll the live catalog
+backwards. Missing dates remain absent rather than synthetic zeroes.
+
+```sh
+scripts/census-publish summary.json --peers peers.json --records census.jsonl --dir census
+swift build
+python3 -m unittest discover -s tests -v
+```
+
+## Cross-census evidence
+
+`python3 scripts/census_compare.py capture --out comparison/NEW-SNAPSHOT`
+captures BTCNodes, Bitnod.es, 21 Ninja and Coin Dance independently. Add
+`--btcnodes snapshot.json --winnow-summary census/YYYY-MM-DD.json
+--winnow-records census.jsonl` to preserve the exact input and linked full-run
+observations. `compare comparison/NEW-SNAPSHOT` repeats normalization offline,
+verifies hashes, and produces JSON and Markdown results. A capture directory is
+immutable; choose a new directory for a new observation.
+
+Every result records source URLs, retrieval details, source hashes, processing
+revision and tool hash. Unknown windows, changed markup and missing metrics are
+explicitly unavailable or inconclusive. Endpoint overlap compares named stages;
+service-bit percentages are calculated only over the same version-responding
+endpoint intersection within the stated timing bound. This does not establish
+correct filter responses or independent confirmation from BTCNodes, Winnow's
+input source. External source failures never affect daily publication.
+
+Method references: [BTCNodes](https://btcnodes.io/),
+[Bitnod.es](https://www.bitnod.es/) (eight-day unresponsive retention),
+[21 Ninja methodology](https://21.ninja/reachable-nodes/methodology/), and
+[Coin Dance](https://coin.dance/nodes) (address deduplication).

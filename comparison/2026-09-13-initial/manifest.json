@@ -1,0 +1,70 @@
+{
+  "capturedAt": "2026-09-13T15:05:42Z",
+  "processingRevision": "4c00e1dead7af72c1b3149122c66d4f856054f96",
+  "schemaVersion": 1,
+  "sources": {
+    "21ninja": {
+      "etag": "\"e26b6abaf4194c7a444c8eeff39673d9105c985df27629f68160365492a03934\"",
+      "file": "21ninja.gz",
+      "finalURL": "https://raw.githubusercontent.com/virtu/p2p-metrics/master/p2p_reachable_node_count.csv",
+      "independence": "Independent crawler implementation (virtu/p2p-crawler); discovery upstream may overlap.",
+      "lastModified": null,
+      "retrievedAt": "2026-09-13T15:05:44Z",
+      "sha256": "66d9f941ac8c38c0b6f15777783aefb49f6d5517de9b117fe89bce65f261ecae",
+      "status": "captured",
+      "url": "https://raw.githubusercontent.com/virtu/p2p-metrics/master/p2p_reachable_node_count.csv"
+    },
+    "21ninja_services": {
+      "etag": "\"6143c5d50c415987a34e295b99a6c0850756b3619095e51a36baf2d240d7b101\"",
+      "file": "21ninja_services.gz",
+      "finalURL": "https://raw.githubusercontent.com/virtu/p2p-metrics/master/p2p_reachable_node_service_count.csv",
+      "independence": "Same 21 Ninja observation series; not another independent source.",
+      "lastModified": null,
+      "retrievedAt": "2026-09-13T15:05:44Z",
+      "sha256": "95e22af62ee843a7bcd0d2f007cc00fd863554cc0610c39e3857249c0985ee80",
+      "status": "captured",
+      "url": "https://raw.githubusercontent.com/virtu/p2p-metrics/master/p2p_reachable_node_service_count.csv"
+    },
+    "bitnodes": {
+      "etag": null,
+      "file": "bitnodes.gz",
+      "finalURL": "https://www.bitnod.es/",
+      "independence": "Separate published dashboard; shared Bitnodes crawler lineage, upstream observation independence unconfirmed.",
+      "lastModified": null,
+      "retrievedAt": "2026-09-13T15:05:42Z",
+      "sha256": "e608754f18cf7fe9016b5f95e7520604e0593d8197a1b62d72d33bdb814619fe",
+      "status": "captured",
+      "url": "https://www.bitnod.es/"
+    },
+    "btcnodes": {
+      "file": "btcnodes.gz",
+      "independence": "Winnow input source; shared endpoint data. BTCNodes and Bitnod.es link to related crawler software; observation independence is unconfirmed.",
+      "retrievalKind": "local preserved run artifact; original retrieval time not asserted",
+      "retrievedAt": "2026-09-13T15:05:42Z",
+      "sha256": "432fdd847f4a8cb768bd6e2b1a2969d18716fb317a8edb42bc6e3a8f7d49e9c5",
+      "status": "captured",
+      "url": "https://btcnodes.io/api/v1/snapshots/latest/"
+    },
+    "coindance": {
+      "etag": null,
+      "file": "coindance.gz",
+      "finalURL": "https://coin.dance/nodes",
+      "independence": "Separate dashboard; implementation and upstream observation independence unconfirmed.",
+      "lastModified": null,
+      "retrievedAt": "2026-09-13T15:05:45Z",
+      "sha256": "efc4a66fe3ca5196d244319016f874e513c0f8149d4b6993496b14cd4b270513",
+      "status": "captured",
+      "url": "https://coin.dance/nodes"
+    },
+    "winnow": {
+      "file": "winnow.gz",
+      "independence": "Winnow observation, with BTCNodes input endpoints.",
+      "retrievalKind": "local preserved run artifact; original retrieval time not asserted",
+      "retrievedAt": "2026-09-13T15:05:46Z",
+      "sha256": "c0bdeb8a2b59e123704bf85023c12d2bdb795696101800587e648a897159ebe0",
+      "status": "captured",
+      "url": "https://census.winnowwallet.com/census/2026-09-13.json"
+    }
+  },
+  "toolSHA256": "2ca87d57e9c1c70363fe3701278b0041d13bbfc13229e13308675ceaab957ba7"
+}

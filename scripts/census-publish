@@ -1,68 +1,115 @@
 #!/usr/bin/env python3
-"""Files a WinnowCensus summary as <dir>/<date>.json and rebuilds
-<dir>/index.json, the list the site reads.
+"""Publish the aggregate and peer catalog from one accepted full run.
 
-    scripts/census-publish summary.json --dir census [--date YYYY-MM-DD] [--force]
-    scripts/census-publish --dir census          # rebuild the index only
+scripts/census-publish summary.json --peers peers.json --records census.jsonl --dir census
+scripts/census-publish --dir census  # rebuild only the historical index
 
-Idempotent for a date: re-running replaces that day's file. The index keeps
-one line per day with the handful of numbers the trend chart needs, so the
-page never has to fetch every day's file to draw it.
-
-A day is refused when any network's handshake rate (usable plus peers that
-answered without compact filters, over dialled) is under HANDSHAKE_FLOOR: a
-router that died partway through the dial turns thousands of reachable
-endpoints into timeouts, and such a day would sit on the chart as a collapse
-that never happened. --force files it anyway.
+Validates the shared Swift peer contract, source hashes, observation date,
+completeness, and per-overlay handshake health before staging any changes.
+No diagnostic or unhealthy-run override exists. Missing dates remain gaps.
 """
-import argparse, json, os, sys
+import argparse, datetime, hashlib, json, os, pathlib, re, shutil, sys, tempfile, subprocess
 
 parser = argparse.ArgumentParser()
-parser.add_argument("summary", nargs="?", help="a --summary-json file; omit to rebuild the index only")
-parser.add_argument("--dir", required=True, help="the census/ directory")
-parser.add_argument("--date", help="YYYY-MM-DD; default is the summary's generatedAt")
-parser.add_argument("--force", action="store_true", help="file the day even if a network's handshake rate is under the floor")
+parser.add_argument("summary", nargs="?")
+parser.add_argument("--dir", required=True)
+parser.add_argument("--peers", help="peers.json generated with this summary")
+parser.add_argument("--validator", default=".build/release/WinnowCensus", help="shared Swift catalog validator")
+parser.add_argument("--records", help="raw JSONL from this full run")
 args = parser.parse_args()
-CENSUS = os.path.abspath(args.dir)
+target = pathlib.Path(args.dir).resolve()
 HANDSHAKE_FLOOR = 0.5
 
-summary = None
-if args.summary:
-    summary = json.load(open(args.summary))
-    date = args.date or summary["generatedAt"][:10]
-    for name, net in sorted(summary.get("networks", {}).items()):
-        dialled = net.get("dialled", 0)
-        if dialled == 0:
-            continue
-        rate = (net.get("usable", 0) + net.get("noCompactFilters", 0)) / dialled
-        if rate < HANDSHAKE_FLOOR and not args.force:
-            sys.exit(f"refusing to file {date}: {name} handshake rate {rate:.1%} of {dialled} dialled "
-                     f"is under {HANDSHAKE_FLOOR:.0%}; a router died during the dial (--force to file anyway)")
-    os.makedirs(CENSUS, exist_ok=True)
-    json.dump(summary, open(os.path.join(CENSUS, f"{date}.json"), "w"), indent=2, sort_keys=True)
+def read_json(path):
+    return json.loads(pathlib.Path(path).read_text())
 
-index = []
-for name in sorted(os.listdir(CENSUS)):
-    # index.json is the index itself; peers.json is the wallet's peer list,
-    # a different schema the wallet repo consumes, not a day's aggregate.
-    if not name.endswith(".json") or name in ("index.json", "peers.json"):
-        continue
-    day = json.load(open(os.path.join(CENSUS, name)))
-    families = day.get("families", {})
-    index.append({
-        "date": name[:-5],
-        "dialled": day["dialled"],
-        "usable": day["usable"],
-        "observedTip": day["observedTip"],
-        "stuckAtSplit": day["stuckAtSplit"],
-        "behind": day["behind"],
-        "knotsUsable": families.get("Knots", {}).get("usable", 0),
-        "knotsStuck": families.get("Knots", {}).get("stuckAtSplit", 0),
-        "coreUsable": families.get("Core", {}).get("usable", 0),
-    })
-json.dump({"days": index}, open(os.path.join(CENSUS, "index.json"), "w"), indent=2)
-if summary:
-    print(f"filed {date}: {summary['usable']} usable of {summary['dialled']} dialled, "
-          f"{summary['stuckAtSplit']} stuck at the split; index has {len(index)} day(s)")
-else:
-    print(f"rebuilt the index: {len(index)} day(s)")
+def digest(path):
+    return hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+def validate_summary(summary, peers):
+    observed = datetime.datetime.strptime(summary["generatedAt"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=datetime.timezone.utc)
+    require(observed <= datetime.datetime.now(datetime.timezone.utc), "future observation")
+    require(summary.get("completeRun") is True and summary.get("sample") == 0, "only accepted full runs can publish")
+    require(type(summary["dialled"]) is int and summary["dialled"] > 0, "empty or invalid run")
+    require(summary.get("expectedRecords") == summary["dialled"], "incomplete run")
+    require(set(summary["networks"]) == {"clearnet", "tor", "i2p"}, "missing overlay measurements")
+    require(sum(n["dialled"] for n in summary["networks"].values()) == summary["dialled"], "overlay count mismatch")
+    for name, net in summary["networks"].items():
+        for field in ("dialled", "usable", "noCompactFilters", "atTip"):
+            require(type(net[field]) is int and 0 <= net[field] <= net["dialled"], f"invalid {name} {field}")
+        require(net["dialled"] > 0, f"empty {name} measurement")
+        rate = (net["usable"] + net["noCompactFilters"]) / net["dialled"]
+        require(HANDSHAKE_FLOOR <= rate <= 1, f"{name} handshake rate {rate:.1%} is unhealthy")
+        require(net["atTip"] <= net["usable"], f"invalid {name} near-tip count")
+    require(peers["schemaVersion"] == 1, "unknown peer schema")
+    require(peers["date"] == observed.date().isoformat() and peers["tip"] == summary["observedTip"], "peer/summary observation mismatch")
+    require(set(peers["networks"]) == {"clearnet", "tor", "i2p"}, "missing peer overlay")
+    require(all(peers["networks"][name] for name in peers["networks"]), "empty peer overlay")
+    require(summary.get("peerListSHA256") == digest(args.peers), "peer artifact hash mismatch")
+    require(summary.get("recordsSHA256") == digest(args.records), "raw run hash mismatch")
+    require(sum(1 for line in pathlib.Path(args.records).read_text().splitlines() if line.strip()) == summary["dialled"], "raw record count mismatch")
+    return observed.date().isoformat()
+
+def index_for(days):
+    index = []
+    for date, day in sorted(days.items()):
+        families = day.get("families", {})
+        index.append({
+            "date": date, "dialled": day["dialled"], "usable": day["usable"],
+            "observedTip": day["observedTip"], "stuckAtSplit": day["stuckAtSplit"], "behind": day["behind"],
+            "knotsUsable": families.get("Knots", {}).get("usable"),
+            "knotsStuck": families.get("Knots", {}).get("stuckAtSplit"),
+            "coreUsable": families.get("Core", {}).get("usable"),
+            "networks": day.get("networks"), "families": day.get("families"),
+            "wholeNetworkFamilies": day.get("wholeNetworkFamilies"),
+            "handshakeLatencyMsMedian": day.get("handshakeLatencyMsMedian"),
+            "medianFeeFilterSatPerKvB": day.get("medianFeeFilterSatPerKvB"),
+        })
+    return {"days": index}
+
+try:
+    days = {}
+    if target.exists():
+        for path in sorted(target.glob("????-??-??.json")):
+            datetime.date.fromisoformat(path.stem)
+            days[path.stem] = read_json(path)
+    updates = {}
+    if args.summary:
+        require(args.peers and args.records, "publishing requires --peers and --records")
+        summary, peers = read_json(args.summary), read_json(args.peers)
+        date = validate_summary(summary, peers)
+        subprocess.run([args.validator, "--validate-peer-list", args.peers], check=True, capture_output=True)
+        # A historical replay may repair its aggregate but never roll the live
+        # discovery catalog backwards.
+        if (target / "peers.json").exists():
+            require(date >= read_json(target / "peers.json")["date"], "cannot replace newer production peers with a historical run")
+        days[date] = summary
+        updates[date + ".json"] = pathlib.Path(args.summary).read_bytes()
+        updates["peers.json"] = pathlib.Path(args.peers).read_bytes()
+    updates["index.json"] = (json.dumps(index_for(days), indent=2, sort_keys=True) + "\n").encode()
+    # Validate and stage every byte before changing the working tree. The git
+    # commit and Cloudflare deployment publish this entire directory together.
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="census-stage-", dir=target.parent) as temp:
+        staged = pathlib.Path(temp)
+        for name, data in updates.items():
+            (staged / name).write_bytes(data)
+        originals = {name: (target / name).read_bytes() if (target / name).exists() else None for name in updates}
+        target.mkdir(exist_ok=True)
+        try:
+            for name in updates:
+                os.replace(staged / name, target / name)
+        except BaseException:
+            for name, data in originals.items():
+                if data is None:
+                    (target / name).unlink(missing_ok=True)
+                else:
+                    (target / name).write_bytes(data)
+            raise
+    print(f"Published {len(updates)} artifacts; {len(days)} observed days (missing dates remain gaps)")
+except (ValueError, KeyError, TypeError, OSError, subprocess.CalledProcessError) as error:
+    sys.exit(f"refusing publication: {error}")

@@ -105,7 +105,7 @@ jobs:
               tor_ok=1; echo "tor: bootstrapped"
             fi
             if [ "$i2p_ok" = 0 ]; then
-              page=$(curl -s --max-time 5 http://127.0.0.1:7071/ | sed 's/<[^>]*>/ /g' | tr -s ' \n')
+              page=$(curl -s --max-time 5 http://127.0.0.1:7071/ | sed 's/<[^>]*>/ /g' | tr -s ' \n' || true)
               # The console is not up for the first seconds; under bash -e an
               # empty grep in an assignment would end the step, so allow it.
               rate=$(echo "$page" | grep -oE 'Tunnel creation success rate: *[0-9]+' | grep -oE '[0-9]+$' || true)
@@ -145,19 +145,10 @@ jobs:
           echo "tor warnings and errors:"
           grep -hE '\[(warn|err)\]' tor.log 2>/dev/null | sed -E 's/^[A-Za-z]{3} [0-9]{2} [0-9:.]+ //' | sort | uniq -c | sort -rn | head -n 20 || true
 
-      - name: Build the verified peer list
-        # census/peers.json is the wallet's fallback-peer product: the usable,
-        # at-tip endpoints of the run just dialled, filtered to the wallet's
-        # PeerPolicyTests invariants. It is permanent, committed alongside the
-        # aggregate; the raw JSON lines stay a 14-day artifact.
-        run: |
-          TIP=$(python3 -c 'import json; print(json.load(open("snapshot.json")).get("latest_height", 0))')
-          .build/release/WinnowCensus --peer-list census.jsonl --tip "$TIP" --out census/peers.json
-
       - name: Publish the aggregate
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
         run: |
-          scripts/census-publish summary.json --dir census
+          scripts/census-publish summary.json --peers peers.json --records census.jsonl --dir census
           git config user.name "winnow-census"
           git config user.email "census@users.noreply.github.com"
           git add census
@@ -198,6 +189,7 @@ jobs:
           path: |
             snapshot.json
             summary.json
+            peers.json
             census.jsonl
             census-summary.txt
             tor.log

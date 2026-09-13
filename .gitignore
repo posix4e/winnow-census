@@ -7,3 +7,9 @@ summary.json
 site/
 node_modules/
 .wrangler/
+
+Packages/
+.swiftpm/
+peers.json
+
+__pycache__/
