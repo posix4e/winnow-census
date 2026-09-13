@@ -22,7 +22,7 @@ import urllib.request
 
 UTC = dt.timezone.utc
 SOURCES = {
-    'btcnodes': ('https://btcnodes.io/api/v1/snapshots/latest/', 'Winnow input source; shared endpoint data. BTCNodes and Bitnod.es link to related crawler software; observation independence is unconfirmed.'),
+    'btcnodes': ('https://btcnodes.io/api/v1/snapshots/latest/', 'Winnow input source; shared endpoint data. Bitnod.es operates its own observations using related crawler software; shared discovery inputs remain possible.'),
     'bitnodes': ('https://www.bitnod.es/', 'Maintainer confirms own measurements using shared ayeowch/bitnodes crawler; discovery inputs may overlap.'),
     '21ninja': ('https://raw.githubusercontent.com/virtu/p2p-metrics/master/p2p_reachable_node_count.csv', 'Independent crawler implementation (virtu/p2p-crawler); discovery upstream may overlap.'),
     '21ninja_services': ('https://raw.githubusercontent.com/virtu/p2p-metrics/master/p2p_reachable_node_service_count.csv', 'Same 21 Ninja observation series; not another independent source.'),
@@ -224,7 +224,7 @@ def capture(args):
     if (out/'manifest.json').exists(): raise ValueError('Choose a new evidence directory; snapshots are immutable')
     specs = dict(SOURCES)
     if args.bitnodes_export_url:
-        specs['bitnodes_export'] = (args.bitnodes_export_url, 'Same Bitnod.es project as the dashboard; observation independence from other projects unconfirmed.')
+        specs['bitnodes_export'] = (args.bitnodes_export_url, SOURCES['bitnodes'][1] + ' Same project as dashboard.')
     if args.winnow_summary: specs['winnow'] = (args.winnow_run_url or 'https://census.winnowwallet.com/census/'+Path(args.winnow_summary).name, 'Winnow observation, with BTCNodes input endpoints.')
     if args.winnow_records: specs['winnow_records'] = (args.winnow_run_url or 'https://github.com/winnowwallet/census/actions/workflows/peer-census.yml', 'Raw observations from the same Winnow full run.')
     manifest = {'schemaVersion': 1, 'capturedAt': now(), 'processingRevision': revision(), 'toolSHA256': sha(Path(__file__).read_bytes()), 'sources': {}}
