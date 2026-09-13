@@ -120,3 +120,27 @@ class HealthTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 collect(root, summary, raw, self.now, offline=True)
             self.assertEqual(output.read_bytes(), previous)
+
+    def test_invalid_mining_capture_keeps_previous_snapshot_and_updates_nodes(self):
+        with tempfile.TemporaryDirectory() as temporary, patch('collect_health.subprocess.check_output', return_value='a' * 40):
+            root = Path(temporary)
+            previous = root / 'health-evidence' / 'mining'
+            previous.mkdir(parents=True)
+            content = json.dumps(dict(hashrates=[dict(timestamp=1, avgHashrate=2e18)],
+                                      currentHashrate=3e18, currentDifficulty=100)).encode()
+            (previous / 'previous.json').write_bytes(content)
+            metadata = dict(schemaVersion=1, file='previous.json', retrievedAt='2026-09-12T17:00:00Z',
+                            sha256=hashlib.sha256(content).hexdigest())
+            (previous / 'previous-manifest.json').write_text(json.dumps(metadata))
+
+            def invalid_response(command, **kwargs):
+                Path(command[-1]).write_text('{"hashrates": []}')
+                return type('Result', (), {'returncode': 0})()
+
+            with patch('collect_health.subprocess.run', side_effect=invalid_response):
+                collect(root, *run(), self.now)
+            report = json.loads((root / 'census/health.json').read_text())
+            self.assertEqual(report['nodeCount'], 3)
+            self.assertEqual(report['mining']['source'], metadata)
+            self.assertEqual(report['miningCaptureAttempt'], 'unavailable; mining response failed validation')
+            self.assertEqual(len(list(previous.glob('*-manifest.json'))), 1)

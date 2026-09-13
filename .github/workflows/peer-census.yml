@@ -14,10 +14,9 @@ name: Peer census
 # Tor or I2P would not be comparable with the others, and the first run showed
 # what that looks like (Tor took longer than three minutes to bootstrap, its
 # SOCKS port was already listening, and half the usable peers vanished). The
-# per-node JSON lines are kept as a 14-day artifact rather than committed:
-# btcnodes already publishes the per-IP view. The one exception is
-# census/peers.json, the wallet's verified fallback-peer list, derived from
-# the run and committed with the aggregate.
+# per-node JSON lines are retained in the 14-day diagnostic artifact and,
+# for accepted health observations, a compressed hash-linked evidence archive.
+# census/peers.json is derived from the same accepted run as the aggregate.
 
 on:
   schedule:

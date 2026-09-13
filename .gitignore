@@ -3,6 +3,7 @@ snapshot.json
 census.jsonl
 census-summary.txt
 summary.json
+!health-evidence/runs/*/summary.json
 .DS_Store
 site/
 node_modules/

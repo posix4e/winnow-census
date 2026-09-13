@@ -80,9 +80,13 @@ def collect(root, summary, raw, now, offline=False):
                 meta = dict(schemaVersion=1, url=url, retrievedAt=captured.strftime('%Y-%m-%dT%H:%M:%SZ'),
                             file=digest + '.json', sha256=digest, captureMethod='HTTP response body',
                             observationWindow='Per-point timestamps; current averaging window unavailable')
-                mining(content, meta, captured)  # Validate before archiving.
-                atomic(mining_dir / meta['file'], content)
-                atomic(mining_dir / (digest + '-manifest.json'), encoded(meta))
+                try:
+                    mining(content, meta, captured)  # Validate before archiving.
+                except (ValueError, KeyError, TypeError, OverflowError):
+                    capture_status = 'unavailable; mining response failed validation'
+                else:
+                    atomic(mining_dir / meta['file'], content)
+                    atomic(mining_dir / (digest + '-manifest.json'), encoded(meta))
                 now = captured
     report = calculate(select_days(candidates, now), now)
     report['selectionPolicy'] = 'Latest accepted observation end per UTC start day; hash breaks exact ties.'
