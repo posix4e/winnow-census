@@ -26,6 +26,7 @@ SOURCES = {
     'bitnodes': ('https://www.bitnod.es/', 'Separate published dashboard; shared Bitnodes crawler lineage, upstream observation independence unconfirmed.'),
     '21ninja': ('https://raw.githubusercontent.com/virtu/p2p-metrics/master/p2p_reachable_node_count.csv', 'Independent crawler implementation (virtu/p2p-crawler); discovery upstream may overlap.'),
     '21ninja_services': ('https://raw.githubusercontent.com/virtu/p2p-metrics/master/p2p_reachable_node_service_count.csv', 'Same 21 Ninja observation series; not another independent source.'),
+    '21ninja_seeds': ('https://21.ninja/seeds.txt.gz', '21 Ninja seed export; same project as the CSV series, not an additional independent observer.'),
     'coindance': ('https://coin.dance/nodes', 'Separate dashboard; implementation and upstream observation independence unconfirmed.'),
 }
 MAX_BYTES = 24 * 1024 * 1024
@@ -116,6 +117,8 @@ def normalize(name, raw, evidence):
         if not result['stages'].get('retainedReachable'): raise ValueError('Unrecognized Bitnod.es protocol table')
         result['definition'] = 'Endpoint dashboard retaining unresponsive endpoints for eight days; discovery hourly.'
         result['limitations'] += ['Exact observation window unavailable. No endpoint export captured.', 'Displayed protocol coverage is IPv4, IPv6 and Tor; I2P measurement unavailable.', 'Software table includes grouped rows; no unverified summation of overlapping groups.']
+    elif name == '21ninja_seeds':
+        normalize_seed_export(raw, result)
     elif name.startswith('21ninja'):
         rows = list(csv.DictReader(io.StringIO(raw.decode())))
         row = max(rows, key=lambda r: r['time'])
@@ -132,7 +135,7 @@ def normalize(name, raw, evidence):
         match = re.search(r'There are currently\s*<strong[^>]*>([\d,]+)</strong>\*? public nodes', page)
         if not match: raise ValueError('Unrecognized Coin Dance headline')
         result['stages'] = {'reachableAddresses': integer(match[1])}
-        matches = re.findall(r'class="nodeTitle"><strong[^>]*>([\d,]+)</strong>\s*([^<]+) nodes', page)
+        matches = re.findall(r'class="nodeTitle"><strong[^>]*>([\d,]+)</strong>\s*([^<]+) nodes?\b', page)
         result['software'] = {name.removeprefix('Bitcoin '): integer(count) for count, name in matches} or None
         result['definition'] = 'Public listening nodes deduplicated by address, rather than address and port.'
         age = re.search(r'Last updated\s*<strong>([^<]+)</strong>', page)
@@ -149,6 +152,38 @@ def normalize(name, raw, evidence):
         if not result['acceptedFullRun']: result['limitations'].append('Legacy or diagnostic artifact lacks full-run contract provenance; near-tip comparison unavailable.')
         result['limitations'].append('No successful compact-filter response test in the census handshake.')
     return result
+
+def normalize_seed_export(raw, result):
+    # The input is itself gzip; preserve those original bytes in the evidence.
+    with gzip.GzipFile(fileobj=io.BytesIO(raw)) as stream:
+        decoded = stream.read(MAX_BYTES + 1)
+    if len(decoded) > MAX_BYTES: raise ValueError('Oversized decompressed seed export')
+    lines = decoded.decode().splitlines()
+    created = re.search(r' on (\S+) with ', lines[0])
+    if not created: raise ValueError('Unrecognized seed export header')
+    result['exportCreatedAt'] = created[1]
+    records = []
+    for line in lines:
+        if line.startswith('#') or not line.strip(): continue
+        fields = line.split(maxsplit=11)
+        if len(fields) != 12: raise ValueError('Malformed seed export row')
+        # Port zero in this export denotes an overlay endpoint without a TCP
+        # port. Keep its source representation; do not invent a dialable port.
+        address = fields[0]
+        canonical = address.lower() if address.endswith('.b32.i2p:0') else endpoint(address)
+        records.append((canonical, int(fields[1]), int(fields[2]), int(fields[9], 16), fields[11].strip('"')))
+    if not records: raise ValueError('Empty seed export')
+    times = [r[2] for r in records if r[2] > 0]
+    if times:
+        result['lastSuccessRange'] = [dt.datetime.fromtimestamp(t, UTC).isoformat().replace('+00:00', 'Z') for t in [min(times), max(times)]]
+    result['endpoints'] = sorted({r[0] for r in records})
+    result['overlays'] = population(result['endpoints'])
+    result['software'] = dict(collections.Counter(family(r[4]) for r in records))
+    result['stages'] = {'retainedSeedEndpoints': len(result['endpoints']), 'exportGoodFlag': sum(r[1] == 1 for r in records),
+                        'retainedAdvertisedCompactFilters': sum(bool(r[3] & 64) for r in records)}
+    result['definition'] = 'Retained seed-export records with per-endpoint last-success times and exporter good flags; not a simultaneous reachable census.'
+    result['limitations'] += ['Export creation time is not the observation time. Retention window and good-flag policy require upstream clarification.',
+                              'I2P port-zero records retain their source representation and are not wallet dial candidates.']
 
 def capture(args):
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
