@@ -17,3 +17,9 @@ clarified that advertisements do not prove filter responses, and requested a
 matching public snapshot. They identified Codex as assisting Alex Newman with
 Winnow and requested attribution preferences and permission before quoting any
 private reply. Duplicate outreach should not be sent.
+
+Bitnod.es replied on September 13. Publication/attribution permission was
+requested in a focused follow-up and remains pending. The private reply is not
+reproduced here. The independently downloaded public CSV is preserved in
+[the supplementary export comparison](2026-09-13-bitnodes-export/report.md);
+its mixed row dates are not treated as a matched observation window.

@@ -60,6 +60,22 @@ class ComparisonTests(unittest.TestCase):
         self.assertIn('shared input',result['independence'])
         with self.assertRaises(ValueError): module.normalize('coindance',b'<html>changed markup</html>',evidence)
 
+    def test_bitnodes_export_does_not_invent_observation_window(self):
+        evidence=dict(url='fixture',sha256='a'*64,retrievedAt='2026-09-13T12:00:00Z',independence='same project')
+        raw=b'export_date,ip_address,port,services,user_agent\n2026-07-03,::ffff:8.8.8.8,8333,64,/Satoshi:30/\n2026-09-13,9.9.9.9,8333,0,/Satoshi:30/\n'
+        result=module.normalize('bitnodes_export',raw,evidence)
+        self.assertIsNone(result['observationStart'])
+        self.assertEqual(result['stages']['retainedExportEndpoints'],2)
+        self.assertEqual(result['stages']['retainedAdvertisedCompactFilters'],1)
+        self.assertEqual(result['rowExportDates'],{'2026-07-03':1,'2026-09-13':1})
+        compared=module.comparison(self.source('winnow'),result)
+        self.assertEqual(compared['endpointOverlap']['intersection'],2)
+        self.assertIsNone(compared['percentagePointDifference'])
+        with self.assertRaises(ValueError):
+            module.normalize('bitnodes_export',raw.replace(b'2026-07-03',b'2026-02-30'),evidence)
+        with self.assertRaises(ValueError):
+            module.normalize('bitnodes_export',raw+raw.splitlines(keepends=True)[1],evidence)
+
     def test_seed_export_keeps_observation_and_creation_distinct(self):
         evidence=dict(url='fixture',sha256='a'*64,retrievedAt='2026-09-13T12:00:00Z',independence='same project')
         raw=gzip.compress(b'# created by gravity on 2026-05-22T23:50:12Z with seed-exporter 1.2.2\n'
