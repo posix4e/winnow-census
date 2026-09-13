@@ -15,7 +15,9 @@ name: Peer census
 # what that looks like (Tor took longer than three minutes to bootstrap, its
 # SOCKS port was already listening, and half the usable peers vanished). The
 # per-node JSON lines are kept as a 14-day artifact rather than committed:
-# btcnodes already publishes the per-IP view.
+# btcnodes already publishes the per-IP view. The one exception is
+# census/peers.json, the wallet's verified fallback-peer list, derived from
+# the run and committed with the aggregate.
 
 on:
   schedule:
@@ -103,7 +105,7 @@ jobs:
               tor_ok=1; echo "tor: bootstrapped"
             fi
             if [ "$i2p_ok" = 0 ]; then
-              page=$(curl -s --max-time 5 http://127.0.0.1:7071/ | sed 's/<[^>]*>/ /g' | tr -s ' \n')
+              page=$(curl -s --max-time 5 http://127.0.0.1:7071/ | sed 's/<[^>]*>/ /g' | tr -s ' \n' || true)
               # The console is not up for the first seconds; under bash -e an
               # empty grep in an assignment would end the step, so allow it.
               rate=$(echo "$page" | grep -oE 'Tunnel creation success rate: *[0-9]+' | grep -oE '[0-9]+$' || true)
@@ -146,7 +148,7 @@ jobs:
       - name: Publish the aggregate
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish }}
         run: |
-          scripts/census-publish summary.json --dir census
+          scripts/census-publish summary.json --peers peers.json --records census.jsonl --dir census
           git config user.name "winnow-census"
           git config user.email "census@users.noreply.github.com"
           git add census
@@ -187,6 +189,7 @@ jobs:
           path: |
             snapshot.json
             summary.json
+            peers.json
             census.jsonl
             census-summary.txt
             tor.log

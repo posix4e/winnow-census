@@ -1,0 +1,67 @@
+import importlib.util
+import json
+import gzip
+from pathlib import Path
+import unittest
+
+spec = importlib.util.spec_from_file_location('compare', Path(__file__).resolve().parents[1]/'scripts/census_compare.py')
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+class ComparisonTests(unittest.TestCase):
+    def source(self, name, date='2026-09-13T10:00:00Z'):
+        return dict(source=name, observationStart=date, endpoints=['8.8.8.8:8333', '9.9.9.9:8333'],
+                    versionEndpoints=['8.8.8.8:8333', '9.9.9.9:8333'], compactFilterEndpoints=['8.8.8.8:8333'])
+
+    def test_canonical_endpoint_and_overlay(self):
+        self.assertEqual(module.endpoint('[::ffff:8.8.8.8]:8333'), '8.8.8.8:8333')
+        self.assertEqual(module.endpoint('[2606:4700:0::1111]:8333'), '[2606:4700::1111]:8333')
+        self.assertEqual(module.overlay('[fc00::1]:8333'), 'cjdns')
+        self.assertEqual(module.overlay('name.onion:8333'), 'tor')
+
+    def test_matched_denominator_and_shared_source(self):
+        a,b = self.source('winnow'),self.source('btcnodes')
+        b['compactFilterEndpoints'] = b['endpoints']
+        result = module.comparison(a,b)
+        self.assertEqual(result['denominator'],2)
+        self.assertEqual(result['countDifference'],-1)
+        self.assertEqual(result['percentagePointDifference'],-50)
+        self.assertIn('not independent',result['reason'])
+        self.assertEqual(result['endpointOverlap']['intersection'],2)
+
+    def test_mismatched_window_missing_metrics_and_missing_timestamp(self):
+        a,b=self.source('winnow'),self.source('21ninja','2025-11-04T00:00:00Z')
+        self.assertIsNone(module.comparison(a,b)['percentagePointDifference'])
+        b['observationStart']=None
+        self.assertIsNone(module.comparison(a,b)['timestampDifferenceSeconds'])
+        b=self.source('coindance');b.pop('versionEndpoints')
+        self.assertIsNone(module.comparison(a,b)['countDifference'])
+
+    def test_no_percentage_from_empty_population(self):
+        a,b=self.source('winnow'),self.source('btcnodes')
+        b['versionEndpoints']=['1.1.1.1:8333']
+        self.assertIsNone(module.comparison(a,b)['percentagePointDifference'])
+
+    def test_fixture_normalization_and_unknown_markup(self):
+        evidence=dict(url='fixture',sha256='a'*64,retrievedAt='2026-09-13T12:00:00Z',independence='shared input')
+        raw=json.dumps(dict(timestamp=1789293600,nodes={'8.8.8.8:8333':[70016,'/Satoshi:30/',0,64,900000]})).encode()
+        result=module.normalize('btcnodes',raw,evidence)
+        self.assertEqual(result['stages']['advertisedCompactFilters'],1)
+        self.assertEqual(result['software'],{'Core':1})
+        self.assertIn('shared input',result['independence'])
+        with self.assertRaises(ValueError): module.normalize('coindance',b'<html>changed markup</html>',evidence)
+
+    def test_seed_export_keeps_observation_and_creation_distinct(self):
+        evidence=dict(url='fixture',sha256='a'*64,retrievedAt='2026-09-13T12:00:00Z',independence='same project')
+        raw=gzip.compress(b'# created by gravity on 2026-05-22T23:50:12Z with seed-exporter 1.2.2\n'
+                          b'8.8.8.8:8333 1 1776949947 100% 100% 100% 100% 100% 946303 00000c49 70016 "/Satoshi:30.2.0/"\n'
+                          b'example.b32.i2p:0 0 1776950000 0% 0% 0% 0% 0% 946303 00000c09 70016 "/Satoshi:30.2.0/"\n')
+        result=module.normalize('21ninja_seeds',raw,evidence)
+        self.assertIsNone(result['observationStart'])
+        self.assertEqual(result['exportCreatedAt'],'2026-05-22T23:50:12Z')
+        self.assertEqual(result['stages']['retainedAdvertisedCompactFilters'],1)
+        self.assertEqual(result['overlays'],{'ipv4':1,'i2p':1})
+        self.assertNotIn('versionEndpoints',result)
+        self.assertIsNone(module.comparison(self.source('winnow'),result)['percentagePointDifference'])
+
+if __name__=='__main__': unittest.main()

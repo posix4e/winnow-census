@@ -1,0 +1,83 @@
+{
+  "capturedAt": "2026-09-13T15:21:02Z",
+  "processingRevision": "245325af10651d9200371cf392c45b91cafa60a0",
+  "schemaVersion": 1,
+  "sources": {
+    "21ninja": {
+      "etag": "\"e26b6abaf4194c7a444c8eeff39673d9105c985df27629f68160365492a03934\"",
+      "file": "21ninja.gz",
+      "finalURL": "https://raw.githubusercontent.com/virtu/p2p-metrics/master/p2p_reachable_node_count.csv",
+      "independence": "Independent crawler implementation (virtu/p2p-crawler); discovery upstream may overlap.",
+      "lastModified": null,
+      "retrievedAt": "2026-09-13T15:21:05Z",
+      "sha256": "66d9f941ac8c38c0b6f15777783aefb49f6d5517de9b117fe89bce65f261ecae",
+      "status": "captured",
+      "url": "https://raw.githubusercontent.com/virtu/p2p-metrics/master/p2p_reachable_node_count.csv"
+    },
+    "21ninja_seeds": {
+      "etag": "\"285ba9-65270b449d6cf\"",
+      "file": "21ninja_seeds.gz",
+      "finalURL": "https://21.ninja/seeds.txt.gz",
+      "independence": "21 Ninja seed export; same project as the CSV series, not an additional independent observer.",
+      "lastModified": "Fri, 22 May 2026 23:51:14 GMT",
+      "retrievedAt": "2026-09-13T15:21:06Z",
+      "sha256": "1b1156d9717a87083ad4276e884d82fd0b914a67de43d7e65e463a6b05b4cad2",
+      "status": "captured",
+      "url": "https://21.ninja/seeds.txt.gz"
+    },
+    "21ninja_services": {
+      "etag": "\"6143c5d50c415987a34e295b99a6c0850756b3619095e51a36baf2d240d7b101\"",
+      "file": "21ninja_services.gz",
+      "finalURL": "https://raw.githubusercontent.com/virtu/p2p-metrics/master/p2p_reachable_node_service_count.csv",
+      "independence": "Same 21 Ninja observation series; not another independent source.",
+      "lastModified": null,
+      "retrievedAt": "2026-09-13T15:21:05Z",
+      "sha256": "95e22af62ee843a7bcd0d2f007cc00fd863554cc0610c39e3857249c0985ee80",
+      "status": "captured",
+      "url": "https://raw.githubusercontent.com/virtu/p2p-metrics/master/p2p_reachable_node_service_count.csv"
+    },
+    "bitnodes": {
+      "etag": null,
+      "file": "bitnodes.gz",
+      "finalURL": "https://www.bitnod.es/",
+      "independence": "Separate published dashboard; shared Bitnodes crawler lineage, upstream observation independence unconfirmed.",
+      "lastModified": null,
+      "retrievedAt": "2026-09-13T15:21:04Z",
+      "sha256": "af26cacd0a534959d1459ad42d325e7dfb266aaeff8dac98c219ee6d94e3150f",
+      "status": "captured",
+      "url": "https://www.bitnod.es/"
+    },
+    "btcnodes": {
+      "etag": "W/\"063a94b22da59272ee972690\"",
+      "file": "btcnodes.gz",
+      "finalURL": "https://btcnodes.io/api/v1/snapshots/latest/",
+      "independence": "Winnow input source; shared endpoint data. BTCNodes and Bitnod.es link to related crawler software; observation independence is unconfirmed.",
+      "lastModified": null,
+      "retrievedAt": "2026-09-13T15:21:02Z",
+      "sha256": "063a94b22da59272ee9726901a1ad5c30f81d156011e40f897df7dae82feb17d",
+      "status": "captured",
+      "url": "https://btcnodes.io/api/v1/snapshots/latest/"
+    },
+    "coindance": {
+      "etag": null,
+      "file": "coindance.gz",
+      "finalURL": "https://coin.dance/nodes",
+      "independence": "Separate dashboard; implementation and upstream observation independence unconfirmed.",
+      "lastModified": null,
+      "retrievedAt": "2026-09-13T15:21:08Z",
+      "sha256": "656fa6c3caac92c1b7650f5c9f34a2042940a08804cbfc14a0ccaee97b0c7432",
+      "status": "captured",
+      "url": "https://coin.dance/nodes"
+    },
+    "winnow": {
+      "file": "winnow.gz",
+      "independence": "Winnow observation, with BTCNodes input endpoints.",
+      "retrievalKind": "local preserved run artifact; original retrieval time not asserted",
+      "retrievedAt": "2026-09-13T15:21:09Z",
+      "sha256": "c0bdeb8a2b59e123704bf85023c12d2bdb795696101800587e648a897159ebe0",
+      "status": "captured",
+      "url": "https://census.winnowwallet.com/census/2026-09-13.json"
+    }
+  },
+  "toolSHA256": "1b02ebdef4a6c106dbb9c1a574a2c662e24202a21f209cce3f0fa149b86f8e58"
+}

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Winnow peer census</title>
-<meta name="description" content="Every reachable Bitcoin node, dialled daily with Winnow's own handshake: how many serve compact filters, how many are at the tip, how many are stuck.">
+<meta name="description" content="Daily Bitcoin endpoint measurements: handshake outcomes, advertised compact-filter support, reported heights, overlay coverage and reproducible artifacts.">
 <style>
   :root { color-scheme: light dark; --paper: #fbfaf6; --ink: #14130e; --ink-2: #585549; --rule: #e5e1d6; --mono: ui-monospace, SFMono-Regular, Menlo, monospace; }
   @media (prefers-color-scheme: dark) { :root { --paper: #14130e; --ink: #f3efe6; --ink-2: #a9a496; --rule: #272319; } }
@@ -29,100 +29,61 @@
 </head>
 <body>
 <main class="census">
-  <h1>Peer census</h1>
-  <p class="sub">Every reachable Bitcoin endpoint, dialled daily with the same handshake Winnow uses. A peer that fails it is one the wallet could never seat, so these numbers describe the wallet's world, not the abstract network.</p>
-
-  <div class="tiles" id="tiles"></div>
-
-  <h2>Trend</h2>
-  <svg id="trend" viewBox="0 0 720 220" role="img" aria-label="Usable peers and stuck peers over time"></svg>
-  <p class="note" id="trend-note"></p>
-
-  <h2>Latest breakdown</h2>
-  <div class="wrap"><table id="outcomes"><thead><tr><th>Outcome</th><th class="num">Nodes</th><th class="num">Share</th></tr></thead><tbody></tbody></table></div>
-  <div class="wrap"><table id="networks"><thead><tr><th>Network</th><th class="num">Dialled</th><th class="num">Usable</th><th class="num">No compact filters</th><th class="num">Stuck at the split, of usable</th></tr></thead><tbody></tbody></table></div>
-  <div class="wrap"><table id="families"><thead><tr><th>Software family</th><th class="num">Usable peers</th><th class="num">At the tip</th><th class="num">Stuck at the split</th><th class="num">Median fee filter</th></tr></thead><tbody></tbody></table></div>
-
-  <h2>How to read it</h2>
-  <p><strong>Usable</strong> means the handshake completed and the node advertises <code>NODE_COMPACT_FILTERS</code>; Winnow refuses anything else at the door. <strong>At the tip</strong> means within a hundred blocks of the median reported height, the same tolerance the wallet's pool applies before unseating a peer. <strong>Stuck at the split</strong> means reporting a height within twenty blocks of 961,632, where the BIP-110 minority chain left the main chain on 2026-08-08 and stopped. <strong>Claiming a taller chain</strong> means reporting a height more than ten blocks above the tip: a node on some other chain, or lying.</p>
-  <p><strong>Endpoints, not nodes.</strong> One node can listen on clearnet, Tor and I2P at once, and Bitcoin Core deliberately makes linking a node's addresses across networks hard, so the census cannot tell how many endpoints are doors into the same node. Distinct usable nodes lie somewhere between the clearnet count and the total.</p>
-  <p>The census judges what a node reports, never which software it runs. The family column is there because the answer turned out to depend on it. Tor and I2P nodes are dialled through a local SOCKS5 proxy when the run has one; a day without a network row did not dial that network. Per-node detail is kept as a two-week workflow artifact; this page carries aggregates only. Source: <a href="https://github.com/posix4e/winnow-census"><code>WinnowCensus</code></a>, run daily by this repository's <code>Peer census</code> workflow, dialling with the <a href="https://github.com/winnowwallet/winnow">Winnow</a> wallet's own connection code. The wallet's stall that prompted it is written up at <a href="https://apnewman.com/p/dead-chain-peers/">One in Twelve Peers Is on a Dead Chain</a>.</p>
+<h1>Bitcoin peer census</h1>
+<p class="sub">BTCNodes supplies the endpoints. Winnow makes a new connection to each supported endpoint and records its Bitcoin handshake, reported height and services.</p>
+<p id="freshness" role="status">Loading observations…</p>
+<div class="tiles" id="tiles"></div>
+<h2>Daily observations</h2>
+<svg id="trend" viewBox="0 0 720 220" role="img" aria-label="Compact-filter handshake share over time; missing days are gaps"></svg>
+<p class="note">Blue: successful compact-filter handshakes / attempted endpoints. Red: reported split-height range / compact-filter handshakes. Missing dates and missing metrics remain gaps. Older runs used the previous height policy; see each artifact’s provenance.</p>
+<h2>Latest measurements</h2>
+<div class="wrap"><table id="outcomes"><thead><tr><th>Outcome</th><th>Endpoints</th><th>Share of attempts</th></tr></thead><tbody></tbody></table></div>
+<div class="wrap"><table id="networks"><thead><tr><th>Transport</th><th>Attempts</th><th>Compact-filter handshake</th><th>Answered without filters</th><th>Near tip, of filter handshakes</th></tr></thead><tbody></tbody></table></div>
+<h2>Software reported by responding endpoints</h2>
+<p class="note">User agents are self-reported. Whole-network counts include version responses without compact-filter support. Filter-handshake counts are a subset and must not be compared with another census’s whole-network percentages.</p>
+<div class="wrap"><table id="families"><thead><tr><th>Family</th><th>All version responses</th><th>Filter handshakes</th><th>Near tip, of filter handshakes</th><th>Median fee filter</th></tr></thead><tbody></tbody></table></div>
+<h2>Artifacts and provenance</h2>
+<ul id="artifacts"></ul>
+<p id="provenance" class="note"></p>
+<h2>What this can establish</h2>
+<p>A successful handshake with <code>NODE_COMPACT_FILTERS</code> advertises support; it does not prove that the endpoint returns valid filters. The wallet checks selected peers and filter responses during normal operation. Near-tip candidates report a nonnegative height within 100 blocks, in either direction, of the reference tip supplied by the input snapshot. Reported height alone cannot identify a chain or establish dishonesty.</p>
+<p>These are endpoints, not a count of distinct machines or people. One node can have several addresses, ports and transports. Multiple nodes can also share a public address. The clearnet category combines IPv4 and IPv6; Tor and I2P are measured separately. CJDNS and invalid or private addresses are excluded. Timeouts describe this observer’s connection attempt, not permanent unreachability.</p>
+<p>The downloadable catalog canonicalizes and deduplicates endpoints, applies public-address and network-prefix diversity rules to clearnet, validates overlay addresses, and retains at most 2,000 candidates per overlay. The wallet supports direct clearnet and opt-in Tor; I2P transport is deferred. A diagnostic sample or unhealthy overlay run cannot replace production data. Refresh failures leave the previous good artifacts available, with their original observation date.</p>
+<p>Latency is elapsed handshake time for successful filter handshakes, including proxy connection setup where used. Fee filters are the peer’s announced relay threshold, not a fee recommendation or a transaction-confirmation estimate. The split-height count records heights 961,632–961,652; it does not independently prove which chain a peer follows.</p>
+<p>See the <a href="https://github.com/winnowwallet/census">census source and reproducible comparisons</a>, <a href="https://github.com/winnowwallet/census/actions/workflows/peer-census.yml">full run logs and retained raw observations</a>, and <a href="https://winnowwallet.com">Winnow wallet</a>. BTCNodes is our input source, so agreement with its endpoint list is not independent confirmation.</p>
 </main>
 <script>
-(async function () {
-  const fmt = n => n.toLocaleString('en-US');
-  const pct = (n, d) => d ? (100 * n / d).toFixed(1) + '%' : '–';
-  // The data sits beside this page: one JSON per day under census/.
-  const sources = ['census/'];
-  let base = null, index = null;
-  for (const candidate of sources) {
-    try {
-      const response = await fetch(candidate + 'index.json', { cache: 'no-store' });
-      if (response.ok) { index = await response.json(); base = candidate; break; }
-    } catch (_) {}
-  }
-  if (!index) { document.getElementById('tiles').textContent = 'The census data could not be loaded.'; return; }
-  const days = index.days;
-  if (!days.length) return;
-  const last = days[days.length - 1];
-  const latest = await (await fetch(base + last.date + '.json', { cache: 'no-store' })).json();
-
-  const tiles = [
-    [fmt(latest.dialled), 'addresses dialled on ' + last.date],
-    [fmt(latest.usable), 'usable endpoints (' + pct(latest.usable, latest.dialled) + ')'],
-    [fmt(latest.stuckAtSplit), 'usable endpoints stuck at the split (' + pct(latest.stuckAtSplit, latest.usable) + ')'],
-    [fmt(latest.aheadOfTip || 0), 'usable endpoints claiming a taller chain'],
-    [fmt(latest.observedTip), 'tip used to judge heights'],
-  ];
-  document.getElementById('tiles').innerHTML = tiles.map(([n, l]) => '<div class="tile"><div class="n">' + n + '</div><div class="l">' + l + '</div></div>').join('');
-
-  const outcomeNames = { ok: 'Usable: handshake ok, compact filters advertised', noCompactFilters: 'Answered, no compact filters', timeout: 'Timed out', unreachable: 'Unreachable', handshakeFailed: 'Handshake failed', protocolViolation: 'Protocol violation' };
-  const ob = document.querySelector('#outcomes tbody');
-  for (const key of Object.keys(outcomeNames)) {
-    const n = latest.outcomes[key] || 0;
-    if (!n) continue;
-    ob.insertAdjacentHTML('beforeend', '<tr><td>' + outcomeNames[key] + '</td><td class="num">' + fmt(n) + '</td><td class="num">' + pct(n, latest.dialled) + '</td></tr>');
-  }
-  const nb = document.querySelector('#networks tbody');
-  for (const [name, n] of Object.entries(latest.networks || {}).sort((a, b) => b[1].dialled - a[1].dialled)) {
-    nb.insertAdjacentHTML('beforeend', '<tr><td>' + name + '</td><td class="num">' + fmt(n.dialled) + '</td><td class="num">' + fmt(n.usable) + ' (' + pct(n.usable, n.dialled) + ')</td><td class="num">' + pct(n.noCompactFilters, n.dialled) + '</td><td class="num">' + pct(n.stuckAtSplit, n.usable) + '</td></tr>');
-  }
-  if (!nb.children.length) document.getElementById('networks').hidden = true;
-  const fb = document.querySelector('#families tbody');
-  const fams = Object.entries(latest.families).sort((a, b) => b[1].usable - a[1].usable);
-  for (const [name, f] of fams) {
-    const ff = f.medianFeeFilterSatPerKvB == null ? '–' : (f.medianFeeFilterSatPerKvB / 1000).toFixed(1) + ' sat/vB';
-    fb.insertAdjacentHTML('beforeend', '<tr><td>' + name + '</td><td class="num">' + fmt(f.usable) + '</td><td class="num">' + pct(f.atTip, f.usable) + '</td><td class="num">' + pct(f.stuckAtSplit, f.usable) + '</td><td class="num">' + ff + '</td></tr>');
-  }
-
-  // Trend: usable share of dialled, and stuck share of usable, per day.
-  const svg = document.getElementById('trend');
-  const W = 720, H = 220, L = 48, R = 12, T = 14, B = 34;
-  const xs = days.map((_, i) => L + (days.length === 1 ? (W - L - R) / 2 : i * (W - L - R) / (days.length - 1)));
-  const series = [
-    { key: 'usable', label: 'usable endpoints, % of dialled', value: d => 100 * d.usable / d.dialled, color: '#3b6ea5' },
-    { key: 'stuck', label: 'stuck at the split, % of usable', value: d => d.usable ? 100 * d.stuckAtSplit / d.usable : 0, color: '#c0392b' },
-  ];
-  const maxY = Math.max(20, ...series.flatMap(s => days.map(s.value))) * 1.1;
-  const y = v => T + (H - T - B) * (1 - v / maxY);
-  let out = '';
-  for (let g = 0; g <= 4; g++) {
-    const v = maxY * g / 4;
-    out += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '" style="stroke: var(--rule, #ccc)" stroke-width="1"/>';
-    out += '<text x="' + (L - 6) + '" y="' + (y(v) + 4) + '" font-size="11" text-anchor="end" style="fill: var(--ink-2, #666)">' + v.toFixed(0) + '%</text>';
-  }
-  for (const s of series) {
-    const pts = days.map((d, i) => xs[i] + ',' + y(s.value(d))).join(' ');
-    out += '<polyline points="' + pts + '" fill="none" stroke="' + s.color + '" stroke-width="2"/>';
-    days.forEach((d, i) => { out += '<circle cx="' + xs[i] + '" cy="' + y(s.value(d)) + '" r="3" fill="' + s.color + '"/>'; });
-  }
-  const step = Math.max(1, Math.ceil(days.length / 8));
-  days.forEach((d, i) => { if (i % step === 0 || i === days.length - 1) out += '<text x="' + xs[i] + '" y="' + (H - 12) + '" font-size="11" text-anchor="middle" style="fill: var(--ink-2, #666)">' + d.date.slice(5) + '</text>'; });
-  series.forEach((s, i) => { out += '<rect x="' + (L + 8 + i * 230) + '" y="' + (T - 10) + '" width="10" height="10" fill="' + s.color + '"/><text x="' + (L + 22 + i * 230) + '" y="' + (T - 1) + '" font-size="11" style="fill: var(--ink, #444)">' + s.label + '</text>'; });
-  svg.innerHTML = out;
-  document.getElementById('trend-note').textContent = days.length === 1
-    ? 'One data point so far; the line starts once the daily run has a second day.'
-    : days.length + ' daily runs, ' + days[0].date + ' to ' + last.date + '.';
+(async () => {
+  const number = n => Number.isFinite(n) ? n.toLocaleString('en-US') : 'Unavailable';
+  const share = (n, d) => Number.isFinite(n) && d > 0 ? (100 * n / d).toFixed(1) + '%' : 'Unavailable';
+  const element = (tag, text) => { const e = document.createElement(tag); e.textContent = text; return e; };
+  const row = (id, values) => { const r = document.createElement('tr'); values.forEach(v => r.append(element('td', v))); document.querySelector('#' + id + ' tbody').append(r); };
+  const get = async path => { const r = await fetch(path, {cache: 'no-store'}); if (!r.ok) throw Error('Artifact unavailable'); return r.json(); };
+  try {
+    const index = await get('census/index.json');
+    const days = index.days.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d.date)).sort((a,b) => a.date.localeCompare(b.date));
+    if (!days.length) throw Error('No observations have been published.');
+    const last = days.at(-1), latest = await get('census/' + last.date + '.json');
+    const age = Math.max(0, Math.floor((Date.now() - Date.parse(latest.generatedAt)) / 86400000));
+    document.getElementById('freshness').textContent = 'Observation: ' + latest.generatedAt + (latest.observationEndedAt ? ' to ' + latest.observationEndedAt : ' (end time unavailable)') + '. ' + age + ' days old.' + (age > 7 ? ' Catalog too old for a wallet refresh.' : '') + (latest.completeRun !== true ? ' Historical artifact: full-run provenance was not recorded by this version.' : ' Accepted full run.');
+    const near = Object.values(latest.networks || {}).reduce((sum,n) => Number.isFinite(n.atTip) && Number.isFinite(sum) ? sum+n.atTip : NaN, 0);
+    const tiles = [[latest.dialled,'attempted endpoints'],[latest.usable,'successful filter handshakes'],[near,'near-tip filter handshakes before catalog limits'],[latest.observedTip,'reference height'],[latest.handshakeLatencyMsMedian,'median handshake milliseconds'],[latest.medianFeeFilterSatPerKvB == null ? null : latest.medianFeeFilterSatPerKvB / 1000,'median announced fee filter (sat/vB)']];
+    for (const [n,label] of tiles) { const tile=element('div',''); tile.className='tile'; const count=element('div',number(n)); count.className='n'; tile.append(count,element('div',label)); document.getElementById('tiles').append(tile); }
+    for (const [name,n] of Object.entries(latest.outcomes || {}).sort()) row('outcomes',[name,number(n),share(n,latest.dialled)]);
+    for (const [name,n] of Object.entries(latest.networks || {}).sort()) row('networks',[name,number(n.dialled),number(n.usable)+' ('+share(n.usable,n.dialled)+')',number(n.noCompactFilters),share(n.atTip,n.usable)]);
+    const families = [...new Set([...Object.keys(latest.families || {}),...Object.keys(latest.wholeNetworkFamilies || {})])].sort();
+    for (const name of families) { const f=latest.families?.[name] || {}; row('families',[name,number(latest.wholeNetworkFamilies?.[name]),number(f.usable),share(f.atTip,f.usable),f.medianFeeFilterSatPerKvB == null ? 'Unavailable' : number(f.medianFeeFilterSatPerKvB/1000)+' sat/vB']); }
+    for (const [url,title] of [['census/'+last.date+'.json','Latest aggregate JSON'],['census/index.json','Daily index JSON'],['census/peers.json','Wallet candidate catalog JSON'],['https://github.com/winnowwallet/census/actions/workflows/peer-census.yml','Source snapshots, raw observations and run logs']]) { const a=element('a',title); a.href=url; const li=element('li','');li.append(a);document.getElementById('artifacts').append(li); }
+    document.getElementById('provenance').textContent='Input SHA-256: '+(latest.inputSHA256 || 'not recorded')+'. Processing revision: '+(latest.processingRevision || 'not recorded')+'. Processed at: '+(latest.processedAt || 'not recorded')+'.';
+    const svg=document.getElementById('trend'), ns='http://www.w3.org/2000/svg';
+    const add=(tag,attrs,text)=>{const e=document.createElementNS(ns,tag);for(const [k,v]of Object.entries(attrs))e.setAttribute(k,v);if(text)e.textContent=text;svg.append(e);};
+    const start=Date.parse(days[0].date), end=Date.parse(last.date), span=end-start || 86400000;
+    const x=d=>48+(Date.parse(d.date)-start)/span*655, y=v=>184-v*1.55;
+    for(let n=0;n<=100;n+=25){add('line',{x1:48,x2:703,y1:y(n),y2:y(n),stroke:'var(--rule)'});add('text',{x:42,y:y(n)+4,'text-anchor':'end',fill:'currentColor','font-size':11},n+'%');}
+    const series=[{color:'#3b6ea5',value:d=>d.dialled>0 && Number.isFinite(d.usable)?100*d.usable/d.dialled:null},{color:'#c0392b',value:d=>d.usable>0 && Number.isFinite(d.stuckAtSplit)?100*d.stuckAtSplit/d.usable:null}];
+    for(const s of series){let previous=null;for(const d of days){const v=s.value(d);if(v==null){previous=null;continue;}if(previous && Date.parse(d.date)-Date.parse(previous.date)===86400000)add('line',{x1:x(previous),y1:y(s.value(previous)),x2:x(d),y2:y(v),stroke:s.color,'stroke-width':2});add('circle',{cx:x(d),cy:y(v),r:3,fill:s.color});previous=d;}}
+    days.forEach((d,i)=>{if(i%Math.max(1,Math.ceil(days.length/7))===0 || i===days.length-1)add('text',{x:x(d),y:210,fill:'currentColor','font-size':11,'text-anchor':'middle'},d.date.slice(5));});
+  } catch(error) { document.getElementById('freshness').textContent='Census data could not be loaded: '+error.message; }
 })();
 </script>
 </body>

@@ -1,0 +1,31 @@
+name: Contract tests
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths: ['Sources/**', 'Package*', 'scripts/**', 'tests/**', '.github/workflows/test.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash --noprofile --norc -e -o pipefail {0}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Build Swift contract and census
+        env:
+          GIT_LFS_SKIP_SMUDGE: '1'
+        run: swift build 2>&1 | tee build.log
+      - name: Replay and failed-publication fixtures
+        run: python3 -m unittest discover -s tests -v 2>&1 | tee tests.log
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: census-contract-${{ github.run_id }}
+          path: |
+            build.log
+            tests.log
