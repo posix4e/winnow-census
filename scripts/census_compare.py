@@ -23,7 +23,7 @@ import urllib.request
 UTC = dt.timezone.utc
 SOURCES = {
     'btcnodes': ('https://btcnodes.io/api/v1/snapshots/latest/', 'Winnow input source; shared endpoint data. BTCNodes and Bitnod.es link to related crawler software; observation independence is unconfirmed.'),
-    'bitnodes': ('https://www.bitnod.es/', 'Separate published dashboard; shared Bitnodes crawler lineage, upstream observation independence unconfirmed.'),
+    'bitnodes': ('https://www.bitnod.es/', 'Maintainer confirms own measurements using shared ayeowch/bitnodes crawler; discovery inputs may overlap.'),
     '21ninja': ('https://raw.githubusercontent.com/virtu/p2p-metrics/master/p2p_reachable_node_count.csv', 'Independent crawler implementation (virtu/p2p-crawler); discovery upstream may overlap.'),
     '21ninja_services': ('https://raw.githubusercontent.com/virtu/p2p-metrics/master/p2p_reachable_node_service_count.csv', 'Same 21 Ninja observation series; not another independent source.'),
     '21ninja_seeds': ('https://21.ninja/seeds.txt.gz', '21 Ninja seed export; same project as the CSV series, not an additional independent observer.'),
@@ -123,11 +123,17 @@ def normalize(name, raw, evidence):
             if heading == 'Service (Bit)':
                 result['stages']['advertisedCompactFilters'] = next((integer(r[1]) for r in table if r[0].startswith('NODE_COMPACT_FILTERS ')), None)
         if not result['stages'].get('retainedReachable'): raise ValueError('Unrecognized Bitnod.es protocol table')
-        result['definition'] = 'Endpoint dashboard retaining unresponsive endpoints for eight days; discovery hourly.'
-        result['limitations'] += ['Exact observation window unavailable. No endpoint export captured.', 'Displayed protocol coverage is IPv4, IPv6 and Tor; I2P measurement unavailable.', 'Software table includes grouped rows; no unverified summation of overlapping groups.']
+        result['definition'] = 'Address-deduplicated active dashboard; excludes nodes last connected nine or more UTC calendar days ago.'
+        result['methodologyReference'] = 'comparison/bitnodes-methodology-2026-09-13.md'
+        result['independenceAtCapture'] = result['independence']
+        result['independence'] = SOURCES['bitnodes'][1]
+        result['limitations'] += ['Continuous crawler; roughly four-to-six-hour cycles do not establish this snapshot exact scan window.', 'IPv4, IPv6 and Tor only; I2P is not measured. Compact-filter responses are not tested.', 'Software table includes grouped rows; no unverified summation of overlapping groups.']
     elif name == '21ninja_seeds':
         normalize_seed_export(raw, result)
     elif name == 'bitnodes_export':
+        result['methodologyReference'] = 'comparison/bitnodes-methodology-2026-09-13.md'
+        result['independenceAtCapture'] = result['independence']
+        result['independence'] = SOURCES['bitnodes'][1] + ' Same project as dashboard, not another independent source.'
         rows = list(csv.DictReader(io.StringIO(raw.decode())))
         if not rows: raise ValueError('Empty Bitnod.es export')
         nodes = {}
