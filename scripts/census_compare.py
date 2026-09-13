@@ -282,7 +282,8 @@ def comparison(winnow, source, max_hours=6):
             retained = set(source['retentionFilteredEndpoints'])
             result['retentionFilteredEndpointOverlap'] = {
                 'definition': 'Winnow attempted address:port endpoints versus export rows kept by the published UTC-calendar retention rule; unmatched scan windows.',
-                'intersection': len(aa & retained), 'winnowOnly': sorted(aa-retained), 'sourceOnly': sorted(retained-aa)}
+                'intersection': len(aa & retained), 'winnowOnly': sorted(aa-retained), 'sourceOnly': sorted(retained-aa),
+                'winnowOnlyOverlays': population(aa-retained), 'sourceOnlyOverlays': population(retained-aa)}
     # This is a deliberately narrower population than a whole-network count:
     # exactly the endpoints that returned a version in both observations.
     required = ['versionEndpoints', 'compactFilterEndpoints']
