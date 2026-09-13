@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import gzip
 from pathlib import Path
 import unittest
 
@@ -49,5 +50,18 @@ class ComparisonTests(unittest.TestCase):
         self.assertEqual(result['software'],{'Core':1})
         self.assertIn('shared input',result['independence'])
         with self.assertRaises(ValueError): module.normalize('coindance',b'<html>changed markup</html>',evidence)
+
+    def test_seed_export_keeps_observation_and_creation_distinct(self):
+        evidence=dict(url='fixture',sha256='a'*64,retrievedAt='2026-09-13T12:00:00Z',independence='same project')
+        raw=gzip.compress(b'# created by gravity on 2026-05-22T23:50:12Z with seed-exporter 1.2.2\n'
+                          b'8.8.8.8:8333 1 1776949947 100% 100% 100% 100% 100% 946303 00000c49 70016 "/Satoshi:30.2.0/"\n'
+                          b'example.b32.i2p:0 0 1776950000 0% 0% 0% 0% 0% 946303 00000c09 70016 "/Satoshi:30.2.0/"\n')
+        result=module.normalize('21ninja_seeds',raw,evidence)
+        self.assertIsNone(result['observationStart'])
+        self.assertEqual(result['exportCreatedAt'],'2026-05-22T23:50:12Z')
+        self.assertEqual(result['stages']['retainedAdvertisedCompactFilters'],1)
+        self.assertEqual(result['overlays'],{'ipv4':1,'i2p':1})
+        self.assertNotIn('versionEndpoints',result)
+        self.assertIsNone(module.comparison(self.source('winnow'),result)['percentagePointDifference'])
 
 if __name__=='__main__': unittest.main()
