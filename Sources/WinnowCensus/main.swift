@@ -115,6 +115,8 @@ private func parseOptions() -> Options {
             usage: WinnowCensus --input nodes.json|nodes.txt [--out results.jsonl] [--summary-json summary.json]
                    WinnowCensus --replay results.jsonl [--summary-json summary.json] [--tip HEIGHT]
                    WinnowCensus --peer-list results.jsonl --out peers.json [--tip HEIGHT]
+                   WinnowCensus --validate-peer-list peers.json
+                   WinnowCensus keygen | sign [--key-env CENSUS_SIGNING_KEY] peers.json | verify [--public-key HEX] peers.json
                                 [--sample N] [--parallel 64] [--tor-parallel 32] [--i2p-parallel 64]
                                 [--timeout 8] [--feefilter-wait-ms 1500]
                                 [--tor-socks 127.0.0.1:9050] [--i2p-socks 127.0.0.1:4447] [--hidden-timeout 25]
@@ -536,6 +538,9 @@ func sha256(_ url: URL) throws -> String {
     SHA256.hash(data: try Data(contentsOf: url)).map { String(format: "%02x", $0) }.joined()
 }
 
+if let command = CommandLine.arguments.dropFirst().first, ["keygen", "sign", "verify"].contains(command) {
+    exit(Signing.run(command, arguments: CommandLine.arguments.dropFirst(2)))
+}
 let options = parseOptions()
 if let catalog = options.validatePeerList {
     _ = try CensusCatalog.decode(Data(contentsOf: catalog), requireFresh: false)
