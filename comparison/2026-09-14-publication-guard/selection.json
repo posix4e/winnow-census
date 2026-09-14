@@ -1,0 +1,344 @@
+{
+  "selection": "Lowest SHA256 endpoint hashes within each group; 32 regressions plus 16 controls",
+  "old_run": 34764970124,
+  "rejected_run": 34788082855,
+  "purpose": "Bounded diagnostic on final census binary through a fresh local Tor client; different vantage and lower concurrency prevent a causal claim about the hosted failure",
+  "endpoints": [
+    {
+      "host": "jjawbqrehjrwkbjfdk7wxngooj64gm4g6mvtetazqqcspdy2gfoimryd.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "z5xyap3vejqozud25zv5rk2ioelbvojct4ci2lnp43bluuhg2xwbghqd.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "3hqe26hoo4hai3f2fyqfm7k4wfagpipng42alkmeyy37c6llqg4mspad.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "5c73h5iona3vruohidenj3tqjpsg3d5qzwdfdv7sfqgubh7wky5tskid.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "rqpavtx235irte4rqgjrck7qltqre57f4y77kmimc6fzhscjux55lhid.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "2nr3mlh7ms5w3ota7k4o4nysxgi6xp7c5qgc6crp4hadf7hwdmr726qd.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "oz5fzfoifin63mjh53wfo2see4vbzra5fwwdv53viqvvurnjvawb6aqd.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "lqd3oybfxaccvcsvfe3inwowtxaxltaai46pmwpcwnvbd2ch5jppfjyd.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "zqqpcaz2ixreg7bis3amapchmiautzjqlrepinijfivzabo7r7yb2cyd.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "cbxhq4swkwlucffwzxkd576kqabek3jayxccdqvokfsjahqwi5egb4yd.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "cjbn6xolfxuatut4fcogx44edvqyhsx7lfvu66dm4ikozmhrocy2ctid.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "6hcgsymym7i72eoi2yeknka25tx4njerlneqxrteknvvtdmeyfn6ypad.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "vhoskzb4xc6nfejpwpx5whcyfcwguuzzculwz3i3goqdq4cfumhqbvid.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "eltsz7wj5np33ht6y5jjq7ca3apoti7wafjl63nbxhfypzcwkob2p2ad.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "2w3upntgdzrdscdvpqjg467ymgdpv3n7ca7sttske4pwb72ofwqb5dqd.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "5qvcxlyvr5te2vtdhpqikpgqlbi6klfko353h54abccvile2myhvonqd.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "ytf2ubq7nfqwcbfjqs374v63dtyyvevfo5qhttmvuf2nuemlgkpfadid.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "6gmrhgjcfxlojzqxlrahvk5mkd47tioagfnemfcio5gv4uzzuopmk7ad.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "ns5p2fa3afrainrynk4dzjfbsvknw6jao5sgsvvv2esaw5b43cieenid.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "5gqtny2qwyo7ipcpf3wtdw5yaxq4hdx4xrzgyt3xfjxn2xuqcgrjn5ad.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "a2vbgmq6zzjaoagq5mt7josltzso5yj6jxbo2d3kpobyqc3jig5se7id.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "7f7eku26fukjdxztdblcocupfltt42kaitpx3mimeih5ezbaqd573fid.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "muulijkcfgk3fgdiylsi5me6umka423gzt6veq26cf3fut334q2ytsqd.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "c7fqpwbphkca5hlgygosqm3dl43qz5hn2tlon4eeqhrecgsnvgzlzmad.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "h7jlajabeldg4egcqz3rdynporzisfp2ps75zfntj5wvksqoshjarnqd.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "ynqgzojvdwv2rui2rlechb22e5hwqipltusdnfkv7s65iz6fgrnybnyd.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "vlnak67x35wgp4afnskfb2a4aurfkjo7ju7yt2edhil6kud5u3pnhpqd.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "xho5ycy6kkgj5dczptcmhgpdgwynu5byrox4dtpkqliud4itorcr5wqd.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "spoit6ocpt6s6hyh3yldkystbrv3j3ufh277c27xwe6i55yq25hdosqd.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "6plq4m4w5cagdylwqqezuu2pt5nip44enwzqhieac54tttwcpgryvoid.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "m7xfasnma3jiehfouhakbsz3dwirm7rnubgt2evxpzwd4ni5r7uufaqd.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "s4l4svunki7yku6m3al3lzu5vrmpek6ao6jrwe7l46bpkgvo5h2ha3qd.onion",
+      "port": 8333,
+      "group": "previously_answered_now_timeout",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "timeout"
+    },
+    {
+      "host": "fbf2ydff4vs5576pjjugig23wynzinn453qacpcghlqlckbgjxisl6id.onion",
+      "port": 8333,
+      "group": "answered_both_runs",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "noCompactFilters"
+    },
+    {
+      "host": "h623fjcw3vhpytnqlxb2hpxd3ukbgj26axljq4hqvt22nwwkqxdtuuid.onion",
+      "port": 8333,
+      "group": "answered_both_runs",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "noCompactFilters"
+    },
+    {
+      "host": "hijr5sxx7raxbqbpbw5mloh3rjhat33ziqj6khx4w2xiyxfp7mhixrqd.onion",
+      "port": 8333,
+      "group": "answered_both_runs",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "ok"
+    },
+    {
+      "host": "p3pnuzfhuzjxowrbylxkdxdb4ciwk4w6d7mypm25zthscuovkn3jmlad.onion",
+      "port": 8333,
+      "group": "answered_both_runs",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "ok"
+    },
+    {
+      "host": "xsfgit7enwrsixcg6bnj4h7wshzl6guy24ijd47r27py4rc3r7tg5jad.onion",
+      "port": 8333,
+      "group": "answered_both_runs",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "ok"
+    },
+    {
+      "host": "eapflh7qrsbovdeuk3bcacrsuqofxluzyf5niv6aknrdwgfpokl7jrqd.onion",
+      "port": 8333,
+      "group": "answered_both_runs",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "ok"
+    },
+    {
+      "host": "uun6wz5suvfjzo6ke5ay2eqa5glkx7kdoif2fzfixncfrxoss4pc64yd.onion",
+      "port": 8333,
+      "group": "answered_both_runs",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "noCompactFilters"
+    },
+    {
+      "host": "elkxfunwo2qfz4twxbieyaezq6icry4qr6zmgckjudv7ceaya3tnrzad.onion",
+      "port": 8333,
+      "group": "answered_both_runs",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "ok"
+    },
+    {
+      "host": "6unadi7wezsxtuvp3wwowabtqimeojgfqhqsmipiykoe3wpxxuh4pgyd.onion",
+      "port": 8333,
+      "group": "answered_both_runs",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "ok"
+    },
+    {
+      "host": "6xuoda4x37lizc65rhqnfs2z4hziqfpc6hakvxsn7ninjz66apdyfmad.onion",
+      "port": 8333,
+      "group": "answered_both_runs",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "noCompactFilters"
+    },
+    {
+      "host": "re7coqtnziot7rrwcpbrfp5xe7v55jzqvycuzbmyvtxraol7lrhqqyyd.onion",
+      "port": 8333,
+      "group": "answered_both_runs",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "noCompactFilters"
+    },
+    {
+      "host": "icqsh4yecmosv5zkttkjjjwhqb336qzdwmguw6cdbmyh7hvvnsvs5nqd.onion",
+      "port": 8333,
+      "group": "answered_both_runs",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "ok"
+    },
+    {
+      "host": "kmtmetiprdbyuncibzfaqswl7ssirad4jixax54hjoucsmli4ggaaxad.onion",
+      "port": 8333,
+      "group": "answered_both_runs",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "ok"
+    },
+    {
+      "host": "t4mez443qzgaerfjzbqk2jq6sonx5r5uzdofjyo36osnqhdzreyvupyd.onion",
+      "port": 8333,
+      "group": "answered_both_runs",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "ok"
+    },
+    {
+      "host": "zf72upcvd4d7wy6go2k7wv4oahfi7blmkky6nolupgfslnkqnmsdbvid.onion",
+      "port": 8333,
+      "group": "answered_both_runs",
+      "earlier_outcome": "noCompactFilters",
+      "failed_run_outcome": "noCompactFilters"
+    },
+    {
+      "host": "h22bpvzucabdtxqyrv7ers74lznffkbee4tudcgo6p4ugw73mkwluoqd.onion",
+      "port": 8333,
+      "group": "answered_both_runs",
+      "earlier_outcome": "ok",
+      "failed_run_outcome": "ok"
+    }
+  ]
+}

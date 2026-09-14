@@ -1,0 +1,54 @@
+{
+  "accepted_records_path": "health-evidence/runs/2026-09-13-5fc157d0421c088a6a466acee533dab824403b908aaeba4bbc6cab22abff0c79/records.jsonl.gz",
+  "accepted_run": "https://github.com/winnowwallet/census/actions/runs/34764970124",
+  "diagnostic": {
+    "binary_sha256": "40751707a7483910ffe797c1ebb057c10207b18738d9b404c21c861b6c21c939",
+    "census_build_revision": "1aeef7a0d2f299b15177f8a6b6bd24df96233928",
+    "completeRun": false,
+    "hidden_timeout_seconds": 30,
+    "limitation": "Timing, vantage, Tor paths and concurrency differ; these observations do not identify the cause or estimate whole-network availability.",
+    "publication_allowed": false,
+    "reference_tip": 966878,
+    "same_source_tree_as": "e804e49a9dfe9879018e0015d1fb1177ccb4c264",
+    "sample": 48,
+    "tor_parallel": 8,
+    "vantage": "Fresh Tor client on the local macOS host; different from hosted full run",
+    "wallet_dependency": "096427c02cb078ad96c2d1692c9222e2b4a0a883"
+  },
+  "files": {
+    "accepted-summary.json": "ce33b9def5d55cde334aefe088cf66ba262092a93cbb898088d4988b46effd7c",
+    "diagnostic-records.jsonl": "065f20b5513cb581b7edda0e48c4c9467a932e5780ad527da0b1ba96889f3aa1",
+    "diagnostic-summary.json": "918b8e204be1f03b12e454886d4b3a8e7cc60530e9cc8b39dc160e21fc6e6453",
+    "nodes.txt": "01023cb9ac508d4f9ea8fd59f8204f4835046a949010196781a7047de15437f1",
+    "rejected-input.json.gz": "1fa1aab75df352f757a16fb89100a69dc30121e764b306505eac0ae986bbbeb5",
+    "rejected-records.jsonl.gz": "72b45ee5928a04cc642172a3da4c4b4527528f5b3211d24c8a7f0534ec2e77fe",
+    "rejected-summary.json": "b5cffc9e619fc7d43b7fc3bbb90403251ede8b63e6c63d94f230a6cab031d35c",
+    "selection.json": "618475251976ecee7ac8510f2c91a7a3c6245ec59e21bc2f5b185eaff5522fc9"
+  },
+  "hosted_policy": {
+    "circuit_build_timeout_seconds": 60,
+    "hidden_timeout_seconds": 30,
+    "learn_circuit_build_timeout": false,
+    "max_client_circuits_pending": 256,
+    "tor_parallel": 48
+  },
+  "independence": "All three runs use Winnow\u2019s handshake implementation; the local follow-up changes observer conditions, not implementation independence.",
+  "input_retrieval_window": {
+    "finished_by": "2026-09-13T22:53:15.261056Z",
+    "source": "Workflow Fetch the day\u2019s snapshot step log; interval bounds the HTTP retrieval, not an exact response timestamp",
+    "started_at": "2026-09-13T22:53:13.926962Z"
+  },
+  "publication": {
+    "accepted": false,
+    "live_artifacts_verified_unchanged": true,
+    "previous_good_aggregate_sha256": "ce33b9def5d55cde334aefe088cf66ba262092a93cbb898088d4988b46effd7c",
+    "previous_good_catalog_sha256": "04f0fa02dc7e491f7de062f61877343e639221758723e48565ebb80c77130ccb",
+    "reason": "Tor reply/handshake rate below 50% per-overlay floor"
+  },
+  "rejected_input_observation_at": "2026-09-13T22:25:58+00:00",
+  "rejected_input_snapshot_id": 1789338358,
+  "rejected_input_url": "https://btcnodes.io/api/v1/snapshots/latest/",
+  "rejected_processing_revision": "e804e49a9dfe9879018e0015d1fb1177ccb4c264",
+  "rejected_run": "https://github.com/winnowwallet/census/actions/runs/34788082855",
+  "schemaVersion": 1
+}
