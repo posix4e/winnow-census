@@ -3,7 +3,7 @@ on:
   pull_request:
   push:
     branches: [main]
-    paths: ['Sources/**', 'Package*', 'scripts/**', 'tests/**', '.github/workflows/test.yml']
+    paths: ['Sources/**', 'Package*', 'scripts/**', 'tests/**', 'comparison/**', '.github/workflows/test.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,6 +22,8 @@ jobs:
         run: swift build 2>&1 | tee build.log
       - name: Replay and failed-publication fixtures
         run: python3 -m unittest discover -s tests -v 2>&1 | tee tests.log
+      - name: Reproduce rejected-run comparison from preserved evidence
+        run: python3 comparison/2026-09-14-publication-guard/reproduce.py --check 2>&1 | tee comparison-report.log
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
@@ -29,3 +31,4 @@ jobs:
           path: |
             build.log
             tests.log
+            comparison-report.log

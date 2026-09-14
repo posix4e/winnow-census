@@ -1,0 +1,126 @@
+{
+  "comparison_scope": "Within-run version-response fractions. Windows and endpoint sets differ; changes are descriptive, not causal or whole-network availability estimates.",
+  "diagnostic": {
+    "answered_both_runs": {
+      "attempted": 16,
+      "outcomes": {
+        "noCompactFilters": 5,
+        "ok": 10,
+        "timeout": 1
+      },
+      "response_percent": 93.75,
+      "version_responders": 15
+    },
+    "previously_answered_now_timeout": {
+      "attempted": 32,
+      "outcomes": {
+        "noCompactFilters": 19,
+        "ok": 8,
+        "timeout": 5
+      },
+      "response_percent": 84.375,
+      "version_responders": 27
+    }
+  },
+  "limitation": "Timing, vantage, Tor paths and concurrency differ; these observations do not identify the cause or estimate whole-network availability.",
+  "overlays": {
+    "clearnet": {
+      "accepted_run": {
+        "attempted": 9721,
+        "outcomes": {
+          "noCompactFilters": 6983,
+          "ok": 1296,
+          "timeout": 1403,
+          "unreachable": 39
+        },
+        "response_percent": 85.16613517127867,
+        "version_responders": 8279
+      },
+      "rejected_run": {
+        "attempted": 9752,
+        "outcomes": {
+          "noCompactFilters": 7007,
+          "ok": 1300,
+          "timeout": 1398,
+          "unreachable": 47
+        },
+        "response_percent": 85.1825266611977,
+        "version_responders": 8307
+      },
+      "response_difference_percentage_points": 0.016391489919030278
+    },
+    "i2p": {
+      "accepted_run": {
+        "attempted": 4276,
+        "outcomes": {
+          "noCompactFilters": 1457,
+          "ok": 2715,
+          "timeout": 57,
+          "unreachable": 47
+        },
+        "response_percent": 97.56782039289055,
+        "version_responders": 4172
+      },
+      "rejected_run": {
+        "attempted": 4345,
+        "outcomes": {
+          "noCompactFilters": 1490,
+          "ok": 2781,
+          "timeout": 30,
+          "unreachable": 44
+        },
+        "response_percent": 98.29689298043728,
+        "version_responders": 4271
+      },
+      "response_difference_percentage_points": 0.7290725875467245
+    },
+    "tor": {
+      "accepted_run": {
+        "attempted": 12694,
+        "outcomes": {
+          "noCompactFilters": 7097,
+          "ok": 3513,
+          "timeout": 1946,
+          "unreachable": 138
+        },
+        "response_percent": 83.58279502126989,
+        "version_responders": 10610
+      },
+      "rejected_run": {
+        "attempted": 12759,
+        "outcomes": {
+          "noCompactFilters": 3458,
+          "ok": 1703,
+          "timeout": 7546,
+          "unreachable": 52
+        },
+        "response_percent": 40.449878517125164,
+        "version_responders": 5161
+      },
+      "response_difference_percentage_points": -43.132916504144724
+    }
+  },
+  "processing_script_sha256": "f495d2db95ed03a3b3f68719f9a37728e3180dc710704f39463e5d0c8c3406e3",
+  "publication": {
+    "accepted": false,
+    "live_artifacts_verified_unchanged": true,
+    "previous_good_aggregate_sha256": "ce33b9def5d55cde334aefe088cf66ba262092a93cbb898088d4988b46effd7c",
+    "previous_good_catalog_sha256": "04f0fa02dc7e491f7de062f61877343e639221758723e48565ebb80c77130ccb",
+    "reason": "Tor reply/handshake rate below 50% per-overlay floor"
+  },
+  "schemaVersion": 1,
+  "windows": {
+    "accepted": {
+      "ended_at": "2026-09-13T16:29:42Z",
+      "started_at": "2026-09-13T15:28:48Z"
+    },
+    "diagnostic": {
+      "ended_at": "2026-09-14T00:53:27Z",
+      "started_at": "2026-09-14T00:52:11Z"
+    },
+    "rejected": {
+      "ended_at": "2026-09-14T00:45:46Z",
+      "started_at": "2026-09-13T23:05:40Z"
+    }
+  }
+}

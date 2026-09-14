@@ -1,0 +1,55 @@
+{
+  "aheadOfTip" : 0,
+  "behind" : 2,
+  "completeRun" : false,
+  "dialled" : 48,
+  "expectedRecords" : 48,
+  "families" : {
+    "Core" : {
+      "atTip" : 16,
+      "behind" : 0,
+      "medianFeeFilterSatPerKvB" : 100,
+      "stuckAtSplit" : 0,
+      "usable" : 16
+    },
+    "Knots" : {
+      "atTip" : 0,
+      "behind" : 2,
+      "medianFeeFilterSatPerKvB" : 9170997,
+      "stuckAtSplit" : 2,
+      "usable" : 2
+    }
+  },
+  "generatedAt" : "2026-09-14T00:52:11Z",
+  "handshakeLatencyMsMedian" : 5813,
+  "inputSHA256" : "01023cb9ac508d4f9ea8fd59f8204f4835046a949010196781a7047de15437f1",
+  "medianFeeFilterSatPerKvB" : 100,
+  "networks" : {
+    "tor" : {
+      "atTip" : 16,
+      "behind" : 2,
+      "dialled" : 48,
+      "noCompactFilters" : 24,
+      "stuckAtSplit" : 2,
+      "usable" : 18
+    }
+  },
+  "observationEndedAt" : "2026-09-14T00:53:27Z",
+  "observedTip" : 966878,
+  "outcomes" : {
+    "noCompactFilters" : 24,
+    "ok" : 18,
+    "timeout" : 6
+  },
+  "peerListSHA256" : "7ea004bffbb48593d3a4d7e786e75d99c04c60581bab03b14d31aaa82a55973f",
+  "processedAt" : "2026-09-14T00:53:27Z",
+  "recordsSHA256" : "065f20b5513cb581b7edda0e48c4c9467a932e5780ad527da0b1ba96889f3aa1",
+  "sample" : 48,
+  "splitHeight" : 961632,
+  "stuckAtSplit" : 2,
+  "usable" : 18,
+  "wholeNetworkFamilies" : {
+    "Core" : 37,
+    "Knots" : 5
+  }
+}
