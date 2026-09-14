@@ -118,6 +118,37 @@ The tool began life as a pull request against the wallet's old repository
 (since deleted) and moved here so the wallet's history never carries a daily
 data commit.
 
+## Signing (`census/peers.json.sig`)
+
+The list is a trust input for the wallet, so the daily job signs it when the
+owner has set a key, and the wallet verifies the signature against the public
+keys compiled into its `CensusPublisher` (see the wallet's
+`docs/census-signing.md`). Ed25519 over the tag `winnow-census-peers-v1\0` and
+the file's exact bytes:
+
+```json
+{"algorithm":"ed25519","publicKey":"<32 bytes hex>","signature":"<64 bytes hex>"}
+```
+
+```sh
+WinnowCensus keygen                                   # a fresh secret, printed once, and its public key
+WinnowCensus sign --key-env CENSUS_SIGNING_KEY census/peers.json
+WinnowCensus verify [--public-key HEX] census/peers.json
+```
+
+Store the secret as the repository's `CENSUS_SIGNING_KEY` Actions secret; the
+daily job signs after every accepted run and says in its log when it could
+not. Until the wallet compiles a key in, it accepts the list unsigned, so the
+secret can be set first and the wallet updated after a signed run exists. The
+Site workflow validates the list and, when present, its signature before
+deploying, so a direct push to `census/**` no longer serves unchecked data.
+
+Onion and I2P entries are sampled by a per-day hash of the address rather than
+taken in latency order, so the overlay cap is a sample of the day's reachable
+hidden services, not the fastest 2,000 responders (which one operator running
+many services could fill). Clearnet keeps the fastest duplicate and one entry
+per netblock, as before.
+
 ## Deploying
 
 The site is a Cloudflare Worker that serves static assets; `wrangler deploy`

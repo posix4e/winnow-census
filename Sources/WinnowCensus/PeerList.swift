@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import WalletCore
 
@@ -9,8 +10,22 @@ func atTip(_ record: Record, tip: Int32) -> Bool {
     return CensusCatalog.nearTip(height, tip: tip)
 }
 
-/// Canonicalize before deduplication. Choose fastest duplicate deterministically,
-/// then enforce address diversity and overlay caps. Source dates are never rebuilt.
+/// Where a candidate stands in the day's selection order. Clearnet keeps the
+/// fastest duplicate and the netblock rule limits any one operator. Onion
+/// and I2P addresses have no netblock, so they are ordered by a per-day hash
+/// of the address instead of by latency: the overlay cap then takes a sample
+/// of the day's reachable hidden services rather than the 2,000 fastest
+/// responders, which one operator running many services on good hardware
+/// could otherwise fill (IR-004). The date keys the hash, so the same day
+/// replays to the same list and a different day samples differently.
+func selectionRank(_ entry: CensusCatalog.Entry, latencyMs: Int, overlay: WalletCore.OverlayNetwork,
+                   date: String) -> String {
+    if overlay == .clearnet { return String(format: "%012d", latencyMs) }
+    return SHA256.hash(data: Data("\(date)\u{0}\(entry.host)".utf8)).map { String(format: "%02x", $0) }.joined()
+}
+
+/// Canonicalize before deduplication. Order by `selectionRank`, then enforce
+/// address diversity and overlay caps. Source dates are never rebuilt.
 func makePeerList(_ records: [Record], tip: Int32, date: String) throws -> PeerList {
     var networks: [String: [CensusCatalog.Entry]] = ["clearnet": [], "tor": [], "i2p": []]
     var candidates: [(CensusCatalog.Entry, Int, WalletCore.OverlayNetwork)] = []
@@ -25,9 +40,10 @@ func makePeerList(_ records: [Record], tip: Int32, date: String) throws -> PeerL
         candidates.append((.init(host: host, port: record.port, userAgent: ua, startHeight: height), record.latencyMs, overlay))
     }
     var seen = Set<PeerEndpoint>(), blocks = Set<String>()
-    for (entry, _, overlay) in candidates.sorted(by: {
-        ($0.1, $0.0.host, $0.0.port, $0.0.userAgent, $0.0.startHeight) <
-        ($1.1, $1.0.host, $1.0.port, $1.0.userAgent, $1.0.startHeight)
+    let ranked = candidates.map { (entry: $0.0, overlay: $0.2, rank: selectionRank($0.0, latencyMs: $0.1, overlay: $0.2, date: date)) }
+    for (entry, overlay, _) in ranked.sorted(by: {
+        ($0.rank, $0.entry.host, $0.entry.port, $0.entry.userAgent, $0.entry.startHeight) <
+        ($1.rank, $1.entry.host, $1.entry.port, $1.entry.userAgent, $1.entry.startHeight)
     }) {
         guard networks[overlay.rawValue]!.count < peerListOverlayCap, seen.insert(entry.endpoint).inserted else { continue }
         if overlay == .clearnet {
