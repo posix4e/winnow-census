@@ -80,8 +80,12 @@ jobs:
         # outlives the job. Tor has bootstrapped in anything from one to ten
         # minutes on these runners, and i2pd needs about ten to learn enough
         # routers and build tunnels, so both are polled together for up to
-        # twenty. A listening SOCKS port is not readiness; only the log lines
-        # are.
+        # thirty. A listening SOCKS port is not readiness; only the log lines
+        # are. Tor carries the bulk of the list and is required; a router
+        # that is still short of its tunnel-success and router-count marks
+        # is reported and the dial goes ahead, since every I2P endpoint is
+        # still dialed and recorded (the 2026-09-15 census was lost to a
+        # router a few points under those marks after twenty minutes).
         run: |
           brew install tor i2pd > /dev/null 2>&1 || brew install tor i2pd
           mkdir -p "$RUNNER_TEMP/tor" "$RUNNER_TEMP/i2pd"
@@ -98,8 +102,8 @@ jobs:
             --httpproxy.enabled=false --sam.enabled=false --i2pcontrol.enabled=false \
             --http.enabled=true --http.port=7071 --log=file --logfile="$RUNNER_TEMP/i2pd.log" \
             --loglevel=warn > /dev/null 2>&1 &
-          tor_ok=0; i2p_ok=0
-          for _ in $(seq 1 120); do
+          tor_ok=0; i2p_ok=0; rate=""; routers=""
+          for i in $(seq 1 180); do
             if [ "$tor_ok" = 0 ] && grep -q 'Bootstrapped 100%' "$RUNNER_TEMP/tor.log" 2>/dev/null; then
               tor_ok=1; echo "tor: bootstrapped"
             fi
@@ -111,17 +115,22 @@ jobs:
               routers=$(echo "$page" | grep -oE 'Routers: *[0-9]+' | grep -oE '[0-9]+$' || true)
               if [ "${rate:-0}" -ge 40 ] && [ "${routers:-0}" -ge 300 ]; then
                 i2p_ok=1; echo "i2pd: ready (success rate ${rate}%, ${routers} routers)"
+              elif [ $((i % 6)) = 0 ]; then
+                echo "i2pd: not ready after $((i / 6)) min (success rate ${rate:-?}%, ${routers:-?} routers)"
               fi
             fi
             [ "$tor_ok" = 1 ] && [ "$i2p_ok" = 1 ] && break
             sleep 10
           done
           if [ "$tor_ok" = 0 ]; then
-            echo "::error::Tor did not bootstrap in twenty minutes"
+            echo "::error::Tor did not bootstrap in thirty minutes"
             tail -n 20 "$RUNNER_TEMP/tor.log" 2>/dev/null || true
+            exit 1
           fi
-          [ "$i2p_ok" = 1 ] || echo "::error::i2pd did not build tunnels in twenty minutes"
-          [ "$tor_ok" = 1 ] && [ "$i2p_ok" = 1 ]
+          if [ "$i2p_ok" = 0 ]; then
+            echo "::warning::i2pd is short of its readiness marks after thirty minutes (success rate ${rate:-?}%, ${routers:-?} routers); I2P endpoints are dialed through it as it stands"
+            tail -n 20 "$RUNNER_TEMP/i2pd.log" 2>/dev/null || true
+          fi
 
       - name: Dial every reachable endpoint
         # The router logs and a health line at the end go into the artifact:
